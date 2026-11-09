@@ -2916,6 +2916,24 @@ pub fn save_setting(app: AppHandle, key: String, value: serde_json::Value) -> Re
         crate::hotkeys::reload();
     }
 
+    // Ledge: moving the notch to another edge re-lays out every notch window strip,
+    // each with its own resolved mode so per-monitor modes survive.
+    if key == crate::notch_geometry::SETTING_KEY {
+        let app_clone = app.clone();
+        tauri::async_runtime::spawn(async move {
+            let labels: Vec<String> = app_clone.webview_windows().keys()
+                .filter(|l| crate::state::is_notch_label(l))
+                .cloned()
+                .collect();
+            for label in labels {
+                if let Some(win) = app_clone.get_webview_window(&label) {
+                    let mode = crate::monitors::resolve_mode_for_label(&app_clone, crate::types::WindowKind::Notch, &label);
+                    init_notch_window(&app_clone, win, &mode).await;
+                }
+            }
+        });
+    }
+
     if key == "nectar-language" {
         crate::i18n::refresh_tray_labels(&app);
     }

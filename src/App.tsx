@@ -431,7 +431,6 @@ function App() {
   // Ledge: which screen edge the notch hugs. "top" keeps upstream Nectar behaviour.
   const [notchPosition, setNotchPosition] = useState<NotchPosition>(() => parseNotchPosition(localStorage.getItem("nectar-notch-position")));
   const isLeft = notchPosition === "left";
-  const notchPositionInitial = useRef(true);
 
 
   useEffect(() => {
@@ -1045,13 +1044,6 @@ function App() {
     if (notchModeInitial.current) { notchModeInitial.current = false; return; }
     invoke("change_notch_mode", { mode: notchMode });
   }, [notchMode, windowLabel]);
-
-  // Side effects: notch-position (skip first render). Re-running the mode init repositions the window strip.
-  useEffect(() => {
-    if (windowLabel !== 'main') return;
-    if (notchPositionInitial.current) { notchPositionInitial.current = false; return; }
-    invoke("change_notch_mode", { mode: notchMode });
-  }, [notchPosition, windowLabel]);
 
   const [tourStep, setTourStep] = useState(0);
   const tourAutoStartedRef = useRef(false);

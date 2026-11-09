@@ -1,5 +1,6 @@
 import { AgentSounds } from "./AgentSounds";
 import { NotchEdgeDelay } from "./NotchEdgeDelay";
+import { NotchPosition } from "./NotchPosition";
 import { NetWidgetMode } from "./NetWidgetMode";
 import { NotchHotkey } from "./NotchHotkey";
 import {
@@ -235,6 +236,8 @@ export function NotchTab({
             />
           </SettingRow>
         )}
+
+        <NotchPosition />
 
         {notchMode !== "fixed" && <NotchEdgeDelay />}
 
