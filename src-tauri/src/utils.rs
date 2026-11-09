@@ -474,17 +474,40 @@ fn settings_cache() -> &'static std::sync::Mutex<std::collections::HashMap<Strin
     crate::state::SETTINGS_CACHE.get_or_init(|| std::sync::Mutex::new(std::collections::HashMap::new()))
 }
 
+/// Ledge defaults that differ from upstream Nectar. Only fills keys the user has never set,
+/// so an explicit choice always wins. Returns true when something was added.
+pub fn seed_ledge_defaults(settings: &mut std::collections::HashMap<String, serde_json::Value>) -> bool {
+    // The dock hides the Windows taskbar while it runs; Ledge is a notch first, so it starts off.
+    const DEFAULTS: [(&str, &str); 1] = [("nectar-dock-enabled", "false")];
+    let mut changed = false;
+    for (key, value) in DEFAULTS {
+        if !settings.contains_key(key) {
+            settings.insert(key.to_string(), serde_json::Value::String(value.to_string()));
+            changed = true;
+        }
+    }
+    changed
+}
+
 /// Load settings.json into the in-memory cache. Call once at startup.
 pub fn init_settings_cache(app: &tauri::AppHandle) {
     use tauri::Manager;
-    if let Some(path) = app.path().app_config_dir().ok().map(|p| p.join("settings.json")) {
-        if let Ok(content) = std::fs::read_to_string(path) {
-            if let Ok(settings) = serde_json::from_str::<std::collections::HashMap<String, serde_json::Value>>(&content) {
-                if let Ok(mut cache) = settings_cache().lock() {
-                    *cache = settings;
-                }
-            }
+    let Some(path) = app.path().app_config_dir().ok().map(|p| p.join("settings.json")) else { return };
+    let mut settings = std::fs::read_to_string(&path)
+        .ok()
+        .and_then(|content| serde_json::from_str::<std::collections::HashMap<String, serde_json::Value>>(&content).ok())
+        .unwrap_or_default();
+    // Persist seeded defaults so the frontend, which reads settings.json, sees the same values.
+    if seed_ledge_defaults(&mut settings) {
+        if let Some(dir) = path.parent() {
+            let _ = std::fs::create_dir_all(dir);
         }
+        if let Ok(json) = serde_json::to_string(&settings) {
+            let _ = std::fs::write(&path, json);
+        }
+    }
+    if let Ok(mut cache) = settings_cache().lock() {
+        *cache = settings;
     }
 }
 
@@ -942,6 +965,18 @@ unsafe fn wic_bitmap_to_base64(factory: &IWICImagingFactory, bitmap: &windows::W
 #[cfg(test)]
 mod tests {
     use super::expand_env_vars;
+
+    #[test]
+    fn ledge_defaults_fill_only_missing_keys() {
+        let mut fresh = std::collections::HashMap::new();
+        assert!(super::seed_ledge_defaults(&mut fresh));
+        assert_eq!(fresh.get("nectar-dock-enabled").and_then(|v| v.as_str()), Some("false"));
+
+        let mut chosen = std::collections::HashMap::new();
+        chosen.insert("nectar-dock-enabled".to_string(), serde_json::Value::String("true".into()));
+        assert!(!super::seed_ledge_defaults(&mut chosen));
+        assert_eq!(chosen.get("nectar-dock-enabled").and_then(|v| v.as_str()), Some("true"));
+    }
 
     #[test]
     fn env_expansion() {
