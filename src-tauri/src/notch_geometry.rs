@@ -69,7 +69,8 @@ pub fn window_rect(pos: NotchPosition, monitor: Rect, depth: i32) -> Rect {
 pub fn in_edge_band(pos: NotchPosition, monitor: Rect, band: i32, x: i32, y: i32) -> bool {
     match pos {
         NotchPosition::Top => y <= monitor.y + band && x >= monitor.x && x <= monitor.x + monitor.w,
-        NotchPosition::Left => x <= monitor.x + band && y >= monitor.y && y <= monitor.y + monitor.h,
+        // Bounded on both sides: with a monitor to the left, x just below monitor.x is on that screen.
+        NotchPosition::Left => x >= monitor.x && x <= monitor.x + band && y >= monitor.y && y <= monitor.y + monitor.h,
     }
 }
 
