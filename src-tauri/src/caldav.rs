@@ -8,7 +8,7 @@ use crate::calendar_sync::{
     self, CalEvent, CalInfo, SourceData, ACCOUNT_KEY, LOOKAHEAD_DAYS, LOOKBACK_DAYS,
 };
 
-const KEYRING_SERVICE: &str = "Nectar CalDAV";
+const KEYRING_SERVICE: &str = "Ledge CalDAV";
 pub const AUTH_ERROR: &str = "Login failed. Check the username and app password.";
 const CALDAV_NS: &str = "urn:ietf:params:xml:ns:caldav";
 
@@ -343,7 +343,7 @@ fn parse_report(xml: &str, calendar: &str, color: &Option<String>) -> Result<Vec
 pub async fn fetch_all(creds: &Creds) -> Result<(Vec<CalInfo>, Vec<CalEvent>), String> {
     let client = reqwest::Client::builder()
         .timeout(Duration::from_secs(30))
-        .user_agent("Nectar")
+        .user_agent("Ledge")
         .build()
         .map_err(|e| e.to_string())?;
     let base = normalize_base(&creds.url)?;

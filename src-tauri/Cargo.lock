@@ -2697,7 +2697,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nectar"
+name = "ledge"
 version = "1.9.6"
 dependencies = [
  "base64 0.22.1",

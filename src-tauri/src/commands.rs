@@ -2643,7 +2643,7 @@ pub async fn quit_nectar(handle: AppHandle) {
 fn registered_uninstaller() -> Option<std::path::PathBuf> {
     use std::os::windows::process::CommandExt;
     for root in ["HKCU", "HKLM"] {
-        let key = format!(r"{}\Software\Microsoft\Windows\CurrentVersion\Uninstall\Nectar", root);
+        let key = format!(r"{}\Software\Microsoft\Windows\CurrentVersion\Uninstall\Ledge", root);
         let Ok(out) = std::process::Command::new("reg")
             .args(["query", &key, "/v", "UninstallString"])
             .creation_flags(0x0800_0000)
@@ -2674,7 +2674,7 @@ pub async fn uninstall_nectar(handle: AppHandle) -> Result<(), String> {
 
     if !uninstaller.exists() {
         uninstaller = registered_uninstaller().ok_or_else(|| {
-            "This copy of Nectar isn't an installed one (it's a portable or development build), so there's nothing to uninstall. Run it from its install folder, or use Windows Settings > Apps.".to_string()
+            "This copy of Ledge isn't an installed one (it's a portable or development build), so there's nothing to uninstall. Run it from its install folder, or use Windows Settings > Apps.".to_string()
         })?;
     }
 
@@ -2737,7 +2737,7 @@ pub fn relaunch_nectar(handle: &AppHandle) {
     if let Some(w) = handle.get_webview_window("main") { if let Ok(hwnd) = w.hwnd() { unregister_appbar_native(hwnd); } }
     if let Some(w) = handle.get_webview_window("dock") { if let Ok(hwnd) = w.hwnd() { unregister_appbar_native(hwnd); } }
     if let Some(w) = handle.get_webview_window("settings") { let _ = w.destroy(); }
-    std::env::set_var("NECTAR_RESTARTING", "1");
+    std::env::set_var("LEDGE_RESTARTING", "1");
     close_single_instance_handles();
     handle.restart();
 }
@@ -3439,7 +3439,7 @@ const PROTECTED_PROCESS_NAMES: &[&str] = &[
     "smss.exe",
     "explorer.exe",
     "dwm.exe",
-    "nectar.exe",
+    "ledge.exe",
 ];
 
 #[tauri::command]
@@ -3706,7 +3706,7 @@ pub async fn export_settings_dialog(app: AppHandle) -> Result<bool, String> {
     let file_path = app
         .dialog()
         .file()
-        .set_title("Export Nectar Settings")
+        .set_title("Export Ledge Settings")
         .set_file_name("nectar-settings.json")
         .add_filter("JSON", &["json"])
         .blocking_save_file();
@@ -3728,7 +3728,7 @@ pub async fn import_settings_dialog(app: AppHandle) -> Result<bool, String> {
     let file_path = app
         .dialog()
         .file()
-        .set_title("Import Nectar Settings")
+        .set_title("Import Ledge Settings")
         .add_filter("JSON", &["json"])
         .blocking_pick_file();
 

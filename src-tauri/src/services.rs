@@ -1217,7 +1217,7 @@ pub fn setup_system_worker(app_handle: AppHandle) -> Sender<SystemCommand> {
                     let len = windows::Win32::UI::WindowsAndMessaging::GetClassNameA(hwnd, &mut class_name);
                     let class_str = std::str::from_utf8(&class_name[..len as usize]).unwrap_or("");
                     
-                    let is_nectar = process_id == my_process_id || class_str.contains("Nectar");
+                    let is_nectar = process_id == my_process_id || class_str.contains("Ledge");
                     let is_visible = IsWindowVisible(hwnd).as_bool();
                     let is_iconic = IsIconic(hwnd).as_bool();
                     
@@ -3290,7 +3290,7 @@ pub unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> B
             }
 
             // Filter out system containers and background stuff
-            if title == "Program Manager" || title == "nectar" || title == "Nectar Dock" {
+            if title == "Program Manager" || title == "ledge" || title == "Ledge Dock" {
                 return true.into();
             }
 
@@ -3322,7 +3322,7 @@ pub unsafe extern "system" fn enum_windows_proc(hwnd: HWND, lparam: LPARAM) -> B
                         return true.into();
                     }
 
-                    if (lowercase_path.contains("nectar.exe") && title != "Settings") ||
+                    if (lowercase_path.contains("ledge.exe") && title != "Settings") ||
                        (lowercase_path.contains("conhost.exe")
                            && !(window_class == "ConsoleWindowClass" && crate::utils::setting_flag("nectar-dock-console-windows"))) ||
                        (lowercase_path.contains("explorer.exe") && !is_explorer_window) ||
@@ -3655,7 +3655,7 @@ pub fn setup_display_change_monitor(app_handle: AppHandle) {
             use windows::Win32::UI::WindowsAndMessaging::*;
             use windows::Win32::System::LibraryLoader::GetModuleHandleW;
 
-            let class_name = windows::core::PCSTR(c"NectarDisplayMonitor".as_ptr() as *const u8);
+            let class_name = windows::core::PCSTR(c"LedgeDisplayMonitor".as_ptr() as *const u8);
             let h_inst = GetModuleHandleW(None).unwrap_or_default().into();
 
             let wnd_class = WNDCLASSEXA {
@@ -3918,7 +3918,7 @@ mod tests {
         }
         assert!(!is_windows_shell_launcher_process(r"C:\Windows\explorer.exe"));
         assert!(!is_windows_shell_launcher_process(r"C:\Tools\SearchAppHelper.exe"));
-        assert!(!is_windows_shell_launcher_process(r"C:\Program Files\Nectar\nectar.exe"));
+        assert!(!is_windows_shell_launcher_process(r"C:\Program Files\Ledge\ledge.exe"));
     }
 
     #[test]

@@ -54,7 +54,7 @@ fn channel_name(app: &AppHandle) -> &'static str {
 /// Manifest of the newest release, pre-releases included (GitHub's `latest` skips them).
 async fn newest_release_manifest() -> Option<tauri::Url> {
     let client = reqwest::Client::builder()
-        .user_agent("Nectar")
+        .user_agent("Ledge")
         .timeout(Duration::from_secs(CHECK_TIMEOUT_SECS))
         .build()
         .ok()?;

@@ -985,7 +985,7 @@ mod tests {
         assert!(!out.contains('%'), "got {out}");
 
         // Unknown variables stay verbatim
-        assert_eq!(expand_env_vars("%NECTAR_NOT_A_REAL_VAR%\\x"), "%NECTAR_NOT_A_REAL_VAR%\\x");
+        assert_eq!(expand_env_vars("%LEDGE_NOT_A_REAL_VAR%\\x"), "%LEDGE_NOT_A_REAL_VAR%\\x");
 
         // Unclosed percent is left alone
         assert_eq!(expand_env_vars("50% done"), "50% done");

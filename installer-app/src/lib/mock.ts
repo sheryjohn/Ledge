@@ -8,8 +8,8 @@ const previewUninstallMode =
 
 export const mockInitialState: InitialState = {
   uninstallMode: previewUninstallMode,
-  defaultInstallDirUser: String.raw`C:\Users\Preview\AppData\Local\Programs\Nectar`,
-  defaultInstallDirAllUsers: String.raw`C:\Program Files\Nectar`,
+  defaultInstallDirUser: String.raw`C:\Users\Preview\AppData\Local\Programs\Ledge`,
+  defaultInstallDirAllUsers: String.raw`C:\Program Files\Ledge`,
   prefillInstallDir: null,
   prefillAllUsers: false,
   prefillDesktopShortcut: true,
@@ -49,7 +49,7 @@ export function mockRunInstall(): Promise<string> {
     { stage: "shortcuts", message: "Creating shortcuts..." },
     { stage: "registry", message: "Registering with Windows..." },
     { stage: "done", message: "Done" },
-  ]).then(() => String.raw`C:\Users\Preview\AppData\Local\Programs\Nectar\nectar.exe`);
+  ]).then(() => String.raw`C:\Users\Preview\AppData\Local\Programs\Ledge\ledge.exe`);
 }
 
 export function mockRunUninstall(): Promise<void> {

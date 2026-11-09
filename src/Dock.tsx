@@ -88,16 +88,16 @@ const fileOf = (p: string) =>
 const isIdentifier = (p: string) => !p.includes('/') && !p.includes('\\');
 
 const isNectarWindow = (app: { name: string; path: string }) =>
-  app.path.toLowerCase().includes('nectar.exe') || app.name.toLowerCase() === 'nectar';
+  app.path.toLowerCase().includes('ledge.exe') || app.name.toLowerCase() === 'ledge';
 
-const NECTAR_MENU_IDS = ["calendar", "settings", "taskmgr", "restart", "clearicons", "quit"];
+const LEDGE_MENU_IDS = ["calendar", "settings", "taskmgr", "restart", "clearicons", "quit"];
 
 function parseMenuItems(val: unknown): string[] {
   try {
     const parsed = typeof val === "string" ? JSON.parse(val) : val;
-    return Array.isArray(parsed) ? parsed.filter((id): id is string => NECTAR_MENU_IDS.includes(id)) : NECTAR_MENU_IDS;
+    return Array.isArray(parsed) ? parsed.filter((id): id is string => LEDGE_MENU_IDS.includes(id)) : LEDGE_MENU_IDS;
   } catch {
-    return NECTAR_MENU_IDS;
+    return LEDGE_MENU_IDS;
   }
 }
 
@@ -1206,7 +1206,7 @@ const Dock = memo(function Dock() {
     return (
       <div
         className="menu-item has-submenu"
-        onMouseEnter={() => setActiveSubmenu('nectar')}
+        onMouseEnter={() => setActiveSubmenu('ledge')}
         onMouseLeave={() => setActiveSubmenu(null)}
       >
         {t("dockmenu.options")}

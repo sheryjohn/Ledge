@@ -6,15 +6,15 @@ const CREATE_BREAKAWAY_FROM_JOB: u32 = 0x0100_0000;
 
 fn nectar_running() -> bool {
     std::process::Command::new("tasklist")
-        .args(["/FI", "IMAGENAME eq nectar.exe"])
+        .args(["/FI", "IMAGENAME eq ledge.exe"])
         .creation_flags(CREATE_NO_WINDOW)
         .output()
-        .is_ok_and(|o| String::from_utf8_lossy(&o.stdout).contains("nectar.exe"))
+        .is_ok_and(|o| String::from_utf8_lossy(&o.stdout).contains("ledge.exe"))
 }
 
 fn stop_running_nectar() {
     let _ = std::process::Command::new("taskkill")
-        .args(["/IM", "nectar.exe"])
+        .args(["/IM", "ledge.exe"])
         .creation_flags(CREATE_NO_WINDOW)
         .output();
 
@@ -26,7 +26,7 @@ fn stop_running_nectar() {
     }
 
     let _ = std::process::Command::new("taskkill")
-        .args(["/F", "/T", "/IM", "nectar.exe"])
+        .args(["/F", "/T", "/IM", "ledge.exe"])
         .creation_flags(CREATE_NO_WINDOW)
         .output();
     for _ in 0..12 {
@@ -45,17 +45,17 @@ fn run_once_key(all_users: bool) -> &'static str {
     }
 }
 
-// Files Nectar itself puts in the install folder (the payload is just nectar.exe)
-const APP_FILES: &[&str] = &["nectar.exe", "uninstall.exe", ".install-scope"];
+// Files Ledge itself puts in the install folder (the payload is just ledge.exe)
+const APP_FILES: &[&str] = &["ledge.exe", "uninstall.exe", ".install-scope"];
 
-// True when the folder belongs to Nectar alone and can be removed as a whole.
+// True when the folder belongs to Ledge alone and can be removed as a whole.
 // The installer extracts straight into the picked folder, so it may be shared (e.g. D:\Apps).
 fn is_dedicated_install_dir(dir: &Path) -> bool {
     let Some(name) = dir.file_name().map(|n| n.to_string_lossy().to_lowercase()) else {
         return false;
     };
 
-    if !name.contains("nectar") {
+    if !name.contains("ledge") {
         return false;
     }
 
@@ -90,8 +90,8 @@ fn remove_app_files_command(install_dir: &Path, all_users: bool) -> String {
            if ((& $left).Count) {{ Start-Sleep -Milliseconds 500 }} \
          }}; \
          if ((& $left).Count) {{ \
-           Add-Content (Join-Path $env:TEMP 'nectar-uninstall.log') (\"Could not remove Nectar files from {dir}: \" + ($failed | Out-String)); \
-           New-ItemProperty -Path '{run_once}' -Name 'NectarCleanup' -Value 'cmd /c del /f /q {del_args}' -Force -ErrorAction SilentlyContinue | Out-Null \
+           Add-Content (Join-Path $env:TEMP 'ledge-uninstall.log') (\"Could not remove Ledge files from {dir}: \" + ($failed | Out-String)); \
+           New-ItemProperty -Path '{run_once}' -Name 'LedgeCleanup' -Value 'cmd /c del /f /q {del_args}' -Force -ErrorAction SilentlyContinue | Out-Null \
          }}",
         pid = std::process::id(),
         run_once = run_once_key(all_users)
@@ -115,7 +115,7 @@ pub fn uninstall(install_dir: &Path, all_users: bool, shortcuts: &[PathBuf]) -> 
     let pid = std::process::id();
     let dir_str = install_dir.to_string_lossy().replace('\'', "''");
     let ps_command = if !is_dedicated_install_dir(install_dir) {
-        // Shared folder: remove only Nectar's own files, never the folder
+        // Shared folder: remove only Ledge's own files, never the folder
         remove_app_files_command(install_dir, all_users)
     } else {
         format!(
@@ -125,8 +125,8 @@ pub fn uninstall(install_dir: &Path, all_users: bool, shortcuts: &[PathBuf]) -> 
                if (Test-Path -LiteralPath '{dir}') {{ Start-Sleep -Milliseconds 500 }} \
              }}; \
              if (Test-Path -LiteralPath '{dir}') {{ \
-               Add-Content (Join-Path $env:TEMP 'nectar-uninstall.log') (\"Could not remove {dir}: \" + ($failed | Out-String)); \
-               New-ItemProperty -Path '{run_once}' -Name 'NectarCleanup' -Value 'cmd /c rd /s /q \"{dir}\"' -Force -ErrorAction SilentlyContinue | Out-Null \
+               Add-Content (Join-Path $env:TEMP 'ledge-uninstall.log') (\"Could not remove {dir}: \" + ($failed | Out-String)); \
+               New-ItemProperty -Path '{run_once}' -Name 'LedgeCleanup' -Value 'cmd /c rd /s /q \"{dir}\"' -Force -ErrorAction SilentlyContinue | Out-Null \
              }}",
             pid = pid,
             dir = dir_str,
