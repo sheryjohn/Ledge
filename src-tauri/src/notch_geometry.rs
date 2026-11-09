@@ -22,6 +22,16 @@ impl NotchPosition {
 
 pub const SETTING_KEY: &str = "nectar-notch-position";
 
+/// How far the notch window reaches into the screen, in logical px before nectar-scale and DPI.
+/// Top keeps upstream's 420. Left panels grow sideways, and the widest (Control Center with many
+/// widgets plus the dual clock) passes 780, so the left strip is deeper.
+pub fn strip_depth_logical(pos: NotchPosition) -> f64 {
+    match pos {
+        NotchPosition::Top => 420.0,
+        NotchPosition::Left => 960.0,
+    }
+}
+
 pub fn notch_position(app: &tauri::AppHandle) -> NotchPosition {
     NotchPosition::parse(crate::utils::get_setting_str(app, SETTING_KEY).as_deref())
 }
@@ -116,6 +126,12 @@ mod tests {
         assert_eq!(NotchPosition::parse(Some("top")), NotchPosition::Top);
         assert_eq!(NotchPosition::parse(Some("bogus")), NotchPosition::Top);
         assert_eq!(NotchPosition::parse(Some("left")), NotchPosition::Left);
+    }
+
+    #[test]
+    fn strip_depth_keeps_top_at_upstream_value() {
+        assert_eq!(strip_depth_logical(NotchPosition::Top), 420.0);
+        assert!(strip_depth_logical(NotchPosition::Left) >= 900.0);
     }
 
     #[test]

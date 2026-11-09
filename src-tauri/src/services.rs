@@ -3063,9 +3063,10 @@ pub fn register_appbar(window: tauri::WebviewWindow) {
         let hwnd = window.hwnd().unwrap();
         let scale = monitor.scale_factor();
         let nectar_scale = crate::utils::get_nectar_scale(window.app_handle());
-        let depth = ((420.0 * nectar_scale) * scale) as i32;
+        let pos = crate::notch_geometry::notch_position(window.app_handle());
+        let depth = ((crate::notch_geometry::strip_depth_logical(pos) * nectar_scale) * scale) as i32;
         let mon = crate::notch_geometry::Rect::new(m_pos.x, m_pos.y, m_size.width as i32, m_size.height as i32);
-        let strip = crate::notch_geometry::window_rect(crate::notch_geometry::notch_position(window.app_handle()), mon, depth);
+        let strip = crate::notch_geometry::window_rect(pos, mon, depth);
         let ph = strip.h;
 
         unsafe {
