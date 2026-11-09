@@ -89,13 +89,32 @@ Backend, new module `src-tauri/src/perf.rs`:
 
 - Adds the `sysinfo` crate (0.33). A dedicated thread samples CPU (total and per core), memory and swap, each fixed disk (total, free, read and write bytes per second), network receive and transmit bytes per second summed over interfaces, and the process list (name, PID, CPU, memory).
 - Process CPU is normalised by core count so it matches Task Manager, where all cores at full load read 100 %. PID 0 (System Idle Process) is skipped.
-- The thread only samples while a notch window says the panel is open, through the `set_perf_active` command. Otherwise it parks, so Ledge costs nothing while hidden.
+- While a notch window says the panel is open (`set_perf_active`), the thread takes a full sample every interval. Otherwise it takes a light sample every 5 s with no process scan, so the sparklines already have history when the panel opens. Activation wakes the thread for an immediate full sample.
 - Each sample is emitted to all windows as the `perf-snapshot` event. It carries the top N processes by CPU and the top N by memory, so the frontend can switch sort without a round trip.
 - Settings: `nectar-perf-interval-ms` (default 1000, clamped to 500 to 5000) and `nectar-perf-top-n` (default 8, clamped to 3 to 20).
 - Kill reuses the existing `kill_process` command (PID based, verifies the image name, refuses protected system processes).
 
 Frontend:
 
-- `src/hooks/usePerf.ts` subscribes to `perf-snapshot`, keeps a ring buffer of the last 90 samples for sparklines, and toggles `set_perf_active` with the panel's visibility.
+- `src/hooks/usePerf.ts` subscribes to `perf-snapshot`, keeps the last 150 samples for sparklines (plotted by timestamp over two minutes, so sparse idle samples and dense active ones share an axis), and toggles `set_perf_active` with the panel's visibility.
+- `src/perfFormat.ts` holds the pure formatting and sparkline maths. `node --experimental-strip-types scripts/perf-format.test.mts` checks it without any packages installed.
 - `src/components/PerformancePanel.tsx` renders the header row of four numbers (CPU, memory, disk, network), CPU and memory sparklines, one bar per fixed disk, and the process list with a sort toggle and a kill button per row.
 - `performance` becomes a notch mode, first in the default panel order, the mode shown on reveal, and switchable off in Settings like the other panels.
+
+## Phase 2 status
+
+Done on branch `ledge/phase-1`: everything in the Phase 2 plan above. Kill uses a two-click confirm (the first click arms the button for 3 s) because the row button sits under the cursor while scanning the list.
+
+Verified on the authoring machine:
+
+- `scripts/perf-format.test.mts` passes under Node 22.
+- Every changed TypeScript file parses (TypeScript 6.0 transpile check).
+- A type check without `node_modules` shows no errors in changed code other than ones caused by the missing packages.
+
+Not verified, needs a dev machine:
+
+- **Rust has never been compiled.** `sysinfo` calls were written against the 0.33.1 docs. `Cargo.lock` does not list `sysinfo` yet; the first `cargo build` adds it. Run `cargo test --manifest-path src-tauri/Cargo.toml` for the `notch_geometry` and `perf` tests.
+- Real `tsc` and `vite build` (`bun run build`).
+- Behaviour: panel height against the top strip with many disks, sampler CPU cost, kill of an elevated process (expected to fail with a readable error in the row).
+
+Left for Phase 3: threshold colours, per-core view, renaming, and translations of the new strings (English is the fallback for every other language).
