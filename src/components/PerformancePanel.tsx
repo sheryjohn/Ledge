@@ -7,6 +7,7 @@ import type { PerfState } from "../hooks/usePerf";
 import "./PerformancePanel.css";
 
 const SPARK_WINDOW_MS = 120_000;
+const SPARK_MIN_SPAN_MS = 5_000;
 const SPARK_W = 160;
 const SPARK_H = 28;
 const CONFIRM_MS = 3000;
@@ -23,8 +24,10 @@ function readSort(): Sort {
 
 function Sparkline({ label, value, points, extra, level = "ok" }: { label: string; value: string; points: Point[]; extra?: Point[]; level?: Level }) {
   const now = points.length ? points[points.length - 1].t : 0;
-  const main = sparkPaths(points, now, SPARK_WINDOW_MS, SPARK_W, SPARK_H);
-  const second = extra ? sparkPaths(extra, now, SPARK_WINDOW_MS, SPARK_W, SPARK_H) : null;
+  // Stretch short histories across the full width until the window has filled.
+  const span = points.length ? Math.max(SPARK_MIN_SPAN_MS, Math.min(SPARK_WINDOW_MS, now - points[0].t)) : SPARK_WINDOW_MS;
+  const main = sparkPaths(points, now, span, SPARK_W, SPARK_H);
+  const second = extra ? sparkPaths(extra, now, span, SPARK_W, SPARK_H) : null;
   return (
     <div className={`perf-spark level-${level}`}>
       <div className="perf-spark-head">
