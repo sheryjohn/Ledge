@@ -179,7 +179,7 @@ Measured on the authoring machine, `sysinfo` and Task Manager read different cou
 
 Matching Task Manager means reading `\Processor Information(_Total)\% Processor Utility` through PDH, private working set per process, showing network in bits per second for physical adapters only, and optionally grouping processes by executable name.
 
-### Matching Task Manager (in progress)
+### Matching Task Manager (done)
 
 New module `src-tauri/src/winperf.rs` reads the same Windows sources Task Manager does. Each reader returns `None` on failure and the sampler falls back to the `sysinfo` value, so a missing counter never blanks the panel.
 
