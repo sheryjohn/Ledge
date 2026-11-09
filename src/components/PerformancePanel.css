@@ -260,3 +260,23 @@
     font-size: 9.5px;
     font-weight: 700;
 }
+
+/* Threshold colour states (see levelsFor in perfFormat.ts). Amber warns, red is critical. */
+.perf-panel {
+    --perf-warn: #ff9f0a;
+    --perf-crit: #ff453a;
+}
+
+.perf-stat.level-warn { background: rgba(255, 159, 10, 0.18); }
+.perf-stat.level-crit { background: rgba(255, 69, 58, 0.22); }
+.perf-stat.level-warn .perf-stat-value { color: var(--perf-warn); }
+.perf-stat.level-crit .perf-stat-value { color: var(--perf-crit); }
+
+.perf-spark.level-warn .perf-spark-line:not(.secondary) { stroke: var(--perf-warn); }
+.perf-spark.level-warn .perf-spark-area { fill: var(--perf-warn); }
+.perf-spark.level-crit .perf-spark-line:not(.secondary) { stroke: var(--perf-crit); }
+.perf-spark.level-crit .perf-spark-area { fill: var(--perf-crit); }
+
+.perf-disk.level-warn .perf-bar-fill { background: var(--perf-warn); }
+.perf-disk.level-crit .perf-bar-fill { background: var(--perf-crit); }
+.perf-disk.level-crit .perf-num { color: var(--perf-crit); }

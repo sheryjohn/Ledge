@@ -50,7 +50,7 @@ import {
 import { setVisibleInterval } from "./hooks/visibleInterval";
 import { usePerf } from "./hooks/usePerf";
 import { PerformancePanel } from "./components/PerformancePanel";
-import { panelBodyHeight } from "./perfFormat";
+import { levelsFor, panelBodyHeight } from "./perfFormat";
 
 // One critically damped spring for the notch's width, height and corners, so the shape settles
 // together without overshooting or wobbling.
@@ -60,6 +60,8 @@ const SHELL_SPRING = { type: "spring", stiffness: 400, damping: 40 } as const;
 type NotchPosition = "top" | "left";
 const parseNotchPosition = (v: string | null): NotchPosition => (v === "left" ? "left" : "top");
 const LEFT_PILL = { width: 14, height: 120 } as const;
+// Collapsed left pill colour for the worst Performance state, so trouble shows without opening it.
+const PILL_TINT = { warn: "rgb(255 159 10 / 0.9)", crit: "rgb(255 69 58 / 0.92)" } as const;
 
 // Timer chime, synthesized with Web Audio so there's no asset. The context is made on the
 // Start click so autoplay lets it play when the timer ends.
@@ -2062,6 +2064,8 @@ function App() {
   const isCalendarMode = nectarMode === 'calendar';
   // Left edge: the island is a thin vertical pill until hovered (or while hidden).
   const leftCollapsed = isLeft && (!isExpanded || isHidden || !isHovered);
+  const pillLevel = panelPerformance && leftCollapsed ? levelsFor(perf.snap, perf.cpuHist).overall : "ok";
+  const pillTint = pillLevel === "ok" ? undefined : ({ "--nectar-bg": PILL_TINT[pillLevel] } as React.CSSProperties);
   // Calendar, command center and shelf are big, dense panels; glass styles thicken the fill for them
   const isPanelOpen = isHovered && (isCalendarMode || nectarMode === 'command-center' || nectarMode === 'shelf' || nectarMode === 'performance');
 
@@ -2182,7 +2186,7 @@ function App() {
             setNectarMode(targetMode);
           }
         }}
-        style={{ ...(isLeft ? { originX: 0 } : { originY: 0 }), ...musicTint }}
+        style={{ ...(isLeft ? { originX: 0 } : { originY: 0 }), ...musicTint, ...pillTint }}
         transition={{
           width: SHELL_SPRING,
           height: SHELL_SPRING,

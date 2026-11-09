@@ -90,3 +90,53 @@ export function panelBodyHeight(diskCount: number, rows: number): number {
   const padding = 16;
   return stats + sparks + disks + listHeader + list + padding;
 }
+
+// ---- Threshold colour states (Phase 3) ----
+
+export type Level = "ok" | "warn" | "crit";
+
+const RANK: Record<Level, number> = { ok: 0, warn: 1, crit: 2 };
+
+export const CPU_SUSTAIN_MS = 10_000;
+
+/** Mean of the values sampled within `windowMs` before `now`. NaN when there are none. */
+export function windowAverage(points: Point[], now: number, windowMs: number): number {
+  const recent = points.filter((p) => p.t > now - windowMs && p.t <= now);
+  if (recent.length === 0) return NaN;
+  return recent.reduce((sum, p) => sum + p.v, 0) / recent.length;
+}
+
+/** CPU is judged on a sustained average so one spike does not flash the panel. */
+export function cpuLevel(sustainedPercent: number): Level {
+  if (!Number.isFinite(sustainedPercent)) return "ok";
+  if (sustainedPercent >= 95) return "crit";
+  if (sustainedPercent >= 80) return "warn";
+  return "ok";
+}
+
+export function memLevel(usedPercent: number): Level {
+  if (usedPercent >= 90) return "crit";
+  if (usedPercent >= 80) return "warn";
+  return "ok";
+}
+
+export function diskLevel(freePercent: number): Level {
+  if (freePercent < 5) return "crit";
+  if (freePercent < 15) return "warn";
+  return "ok";
+}
+
+export function worst(...levels: Level[]): Level {
+  return levels.reduce<Level>((a, b) => (RANK[b] > RANK[a] ? b : a), "ok");
+}
+
+export type Levels = { cpu: Level; mem: Level; disks: Level[]; overall: Level };
+
+/** Every colour state for one snapshot plus the CPU history. */
+export function levelsFor(snap: PerfSnapshot | null, cpuHist: Point[]): Levels {
+  if (!snap) return { cpu: "ok", mem: "ok", disks: [], overall: "ok" };
+  const cpu = cpuLevel(windowAverage(cpuHist, snap.ts_ms, CPU_SUSTAIN_MS));
+  const mem = memLevel(percent(snap.mem_used, snap.mem_total));
+  const disks = snap.disks.map((d) => diskLevel(100 - percent(d.total - d.free, d.total)));
+  return { cpu, mem, disks, overall: worst(cpu, mem, ...disks) };
+}

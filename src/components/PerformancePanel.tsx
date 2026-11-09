@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { X } from "lucide-react";
 import { useT } from "../i18n";
-import { formatBytes, formatRate, percent, sparkPaths, type Point, type ProcInfo } from "../perfFormat";
+import { formatBytes, formatRate, levelsFor, percent, sparkPaths, type Level, type Point, type ProcInfo } from "../perfFormat";
 import type { PerfState } from "../hooks/usePerf";
 import "./PerformancePanel.css";
 
@@ -21,12 +21,12 @@ function readSort(): Sort {
   }
 }
 
-function Sparkline({ label, value, points, extra }: { label: string; value: string; points: Point[]; extra?: Point[] }) {
+function Sparkline({ label, value, points, extra, level = "ok" }: { label: string; value: string; points: Point[]; extra?: Point[]; level?: Level }) {
   const now = points.length ? points[points.length - 1].t : 0;
   const main = sparkPaths(points, now, SPARK_WINDOW_MS, SPARK_W, SPARK_H);
   const second = extra ? sparkPaths(extra, now, SPARK_WINDOW_MS, SPARK_W, SPARK_H) : null;
   return (
-    <div className="perf-spark">
+    <div className={`perf-spark level-${level}`}>
       <div className="perf-spark-head">
         <span>{label}</span>
         <span className="perf-num">{value}</span>
@@ -108,16 +108,17 @@ export function PerformancePanel({ perf }: { perf: PerfState }) {
   }
 
   const memPct = percent(s.mem_used, s.mem_total);
+  const lv = levelsFor(s, perf.cpuHist);
   const procs = (sort === "cpu" ? perf.topCpu : perf.topMem).filter((p) => !hiddenPids.has(p.pid));
 
   return (
     <div className="perf-panel" onClick={(e) => e.stopPropagation()}>
       <div className="perf-stats">
-        <div className="perf-stat">
+        <div className={`perf-stat level-${lv.cpu}`}>
           <span className="perf-stat-label">{t("perf.cpu")}</span>
           <span className="perf-stat-value">{Math.round(s.cpu_total)}%</span>
         </div>
-        <div className="perf-stat">
+        <div className={`perf-stat level-${lv.mem}`}>
           <span className="perf-stat-label">{t("perf.memory")}</span>
           <span className="perf-stat-value">{Math.round(memPct)}%</span>
         </div>
@@ -132,21 +133,22 @@ export function PerformancePanel({ perf }: { perf: PerfState }) {
       </div>
 
       <div className="perf-sparks">
-        <Sparkline label={t("perf.cpu")} value={`${s.cpu_cores.length} ${t("perf.cores")}`} points={perf.cpuHist} />
+        <Sparkline label={t("perf.cpu")} value={`${s.cpu_cores.length} ${t("perf.cores")}`} points={perf.cpuHist} level={lv.cpu} />
         <Sparkline
           label={t("perf.memory")}
           value={s.swap_total > 0 ? `${formatBytes(s.mem_used)} · ${t("perf.swap")} ${formatBytes(s.swap_used)}` : formatBytes(s.mem_used)}
           points={perf.memHist}
           extra={s.swap_total > 0 ? perf.swapHist : undefined}
+          level={lv.mem}
         />
       </div>
 
       {s.disks.length > 0 && (
         <div className="perf-disks">
-          {s.disks.map((d) => {
+          {s.disks.map((d, i) => {
             const used = percent(d.total - d.free, d.total);
             return (
-              <div className="perf-disk" key={d.mount} title={`${d.name || d.mount}: ${t("perf.read")} ${formatRate(d.read_bps)}, ${t("perf.write")} ${formatRate(d.write_bps)}`}>
+              <div className={`perf-disk level-${lv.disks[i] ?? "ok"}`} key={d.mount} title={`${d.name || d.mount}: ${t("perf.read")} ${formatRate(d.read_bps)}, ${t("perf.write")} ${formatRate(d.write_bps)}`}>
                 <span className="perf-disk-name">{d.mount.replace(/\\$/, "")}</span>
                 <div className="perf-bar"><div className="perf-bar-fill" style={{ width: `${used}%` }} /></div>
                 <span className="perf-num">{formatBytes(d.free)} {t("perf.free")}</span>
