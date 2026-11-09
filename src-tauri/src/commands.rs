@@ -389,9 +389,11 @@ pub async fn init_notch_window(app: &AppHandle, main_win: tauri::WebviewWindow, 
         let m_size = monitor.size();
         let scale = monitor.scale_factor();
         let nectar_scale = crate::utils::get_nectar_scale(app);
-        let target_height = (420.0 * nectar_scale * scale) as u32;
-        let _ = main_win.set_position(tauri::PhysicalPosition::new(m_pos.x, m_pos.y));
-        let _ = main_win.set_size(tauri::PhysicalSize::new(m_size.width, target_height));
+        let depth = (420.0 * nectar_scale * scale) as i32;
+        let mon = crate::notch_geometry::Rect::new(m_pos.x, m_pos.y, m_size.width as i32, m_size.height as i32);
+        let r = crate::notch_geometry::window_rect(crate::notch_geometry::notch_position(app), mon, depth);
+        let _ = main_win.set_position(tauri::PhysicalPosition::new(r.x, r.y));
+        let _ = main_win.set_size(tauri::PhysicalSize::new(r.w as u32, r.h as u32));
     }
 
     let current = crate::state::get_overlap(crate::state::notch_overlap(), &label);

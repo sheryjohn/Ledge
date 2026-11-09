@@ -2203,7 +2203,8 @@ unsafe fn process_mouse_move(app_handle: &AppHandle, cursor: windows::Win32::Fou
             let notch_cached_pos = MH_CACHED_NOTCH_MON_POS.lock().unwrap().unwrap_or((mon_x, mon_y));
             let notch_cached_size = MH_CACHED_NOTCH_MON_SIZE.lock().unwrap().unwrap_or((mon_w as u32, mon_h as u32));
             let (notch_mon_x, notch_mon_y) = notch_cached_pos;
-            let (notch_mon_w, _notch_mon_h) = (notch_cached_size.0 as i32, notch_cached_size.1 as i32);
+            let (notch_mon_w, notch_mon_h) = (notch_cached_size.0 as i32, notch_cached_size.1 as i32);
+            let notch_pos = crate::notch_geometry::notch_position(app_handle);
 
             let fg_fs = CURRENT_FOREGROUND_FULLSCREEN.load(Ordering::Relaxed);
             let dock_fg_fs = CURRENT_FOREGROUND_FULLSCREEN_ON_DOCK.load(Ordering::Relaxed);
@@ -2336,8 +2337,9 @@ unsafe fn process_mouse_move(app_handle: &AppHandle, cursor: windows::Win32::Fou
                         let in_notch_hover = !notch_fs && crate::state::get_flag(crate::state::notch_hovered(), "main");
                         let mut is_notch_hovered = false;
                         let scale = main_win.scale_factor().unwrap_or(1.0);
-                        let in_top_band = cursor.y <= (notch_mon_y + (8.0 * scale) as i32) &&
-                                          cursor.x >= notch_mon_x && cursor.x <= (notch_mon_x + notch_mon_w);
+                        let notch_mon = crate::notch_geometry::Rect::new(notch_mon_x, notch_mon_y, notch_mon_w, notch_mon_h);
+                        // Named for the top edge upstream; with a left notch it is the left-edge band.
+                        let in_top_band = crate::notch_geometry::in_edge_band(notch_pos, notch_mon, (8.0 * scale) as i32, cursor.x, cursor.y);
                         let at_top_edge = top_edge_armed(app_handle, "main", in_top_band && !notch_fs, now);
 
                         if notch_fs {
@@ -2363,10 +2365,15 @@ unsafe fn process_mouse_move(app_handle: &AppHandle, cursor: windows::Win32::Fou
                                     // its bounds once grabbed, so removing the edge-forced
                                     // interactivity doesn't reintroduce boundary flicker.
                                     let hyst = if MH_LAST_MAIN_IGNORE.load(Ordering::Relaxed) == 0 { (10.0 * scale) as i32 } else { 0 };
-                                    let rx = win_pos.x + (r.x as f64 * scale) as i32 - pad_x - hyst;
-                                    let rw = (r.width as f64 * scale) as i32 + (pad_x * 2) + (hyst * 2);
-                                    let ry_top = win_pos.y;
-                                    let ry_bottom = win_pos.y + (r.height as f64 * scale) as i32 + pad_y_bottom + hyst;
+                                    let island = crate::notch_geometry::Rect::new(
+                                        win_pos.x + (r.x as f64 * scale) as i32,
+                                        win_pos.y + (r.y as f64 * scale) as i32,
+                                        (r.width as f64 * scale) as i32,
+                                        (r.height as f64 * scale) as i32,
+                                    );
+                                    let pads = crate::notch_geometry::Pads { side: pad_x, far: pad_y_bottom, hyst };
+                                    let bx = crate::notch_geometry::interactive_box(notch_pos, (win_pos.x, win_pos.y), island, pads);
+                                    let (rx, rw, ry_top, ry_bottom) = (bx.x, bx.w, bx.y, bx.y + bx.h);
 
                                     // A hidden notch must not eat clicks, in smart/peek it's off screen most of the time.
                                     let notch_hidden = crate::state::get_flag(crate::state::notch_hidden(), "main");
@@ -2385,14 +2392,13 @@ unsafe fn process_mouse_move(app_handle: &AppHandle, cursor: windows::Win32::Fou
                                     // Keep this immediate (not dwell-gated), the notch rect lags the animation and flipping
                                     // click-through mid-hover makes it flicker. Still gated on the notch being visible or hovered.
                                     let edge_pad = (60.0 * scale) as i32;
-                                    if !fg_fs && in_top_band && (!notch_hidden || hover_active)
-                                        && cursor.x >= rx - edge_pad && cursor.x <= rx + rw + edge_pad {
+                                    let over_span = crate::notch_geometry::near_edge_span(notch_pos, bx, edge_pad, cursor.x, cursor.y);
+                                    if !fg_fs && in_top_band && (!notch_hidden || hover_active) && over_span {
                                         is_click_interactive = true;
                                     }
 
                                     if left_button_held() {
-                                        let over_span = cursor.x >= rx - edge_pad && cursor.x <= rx + rw + edge_pad;
-                                        let over_box = cursor.x >= rx && cursor.x <= rx + rw && cursor.y >= ry_top && cursor.y <= ry_bottom;
+                                        let over_box = bx.contains(cursor.x, cursor.y);
                                         if over_box || (in_top_band && over_span) {
                                             is_click_interactive = true;
                                         }
@@ -2777,13 +2783,14 @@ fn hit_test_extra_notch_windows(app_handle: &AppHandle, cursor: windows::Win32::
             continue;
         }
         let Ok(hwnd) = main_win.hwnd() else { continue };
-        let Some((mon_x, mon_y, mon_w, _mon_h)) = monitor_rect_for_hwnd(hwnd) else { continue };
+        let Some((mon_x, mon_y, mon_w, mon_h)) = monitor_rect_for_hwnd(hwnd) else { continue };
+        let notch_pos = crate::notch_geometry::notch_position(app_handle);
+        let notch_mon = crate::notch_geometry::Rect::new(mon_x, mon_y, mon_w, mon_h);
 
         let scale = main_win.scale_factor().unwrap_or(1.0);
         let notch_fs = notch_suppressed(app_handle, &label);
         let in_notch_hover = !notch_fs && crate::state::get_flag(crate::state::notch_hovered(), &label);
-        let in_top_band = cursor.y <= (mon_y + (8.0 * scale) as i32) &&
-                          cursor.x >= mon_x && cursor.x <= (mon_x + mon_w);
+        let in_top_band = crate::notch_geometry::in_edge_band(notch_pos, notch_mon, (8.0 * scale) as i32, cursor.x, cursor.y);
         let at_top_edge = top_edge_armed(app_handle, &label, in_top_band && !notch_fs, now);
 
         let mut is_notch_hovered = false;
@@ -2803,10 +2810,15 @@ fn hit_test_extra_notch_windows(app_handle: &AppHandle, cursor: windows::Win32::
                 let pad_y_bottom = (5.0 * scale) as i32;
                 let last_ignore = crate::state::get_i32(crate::state::notch_extra_last_ignore(), &label, -1);
                 let hyst = if last_ignore == 0 { (10.0 * scale) as i32 } else { 0 };
-                let rx = win_pos.x + (r.x as f64 * scale) as i32 - pad_x - hyst;
-                let rw = (r.width as f64 * scale) as i32 + (pad_x * 2) + (hyst * 2);
-                let ry_top = win_pos.y;
-                let ry_bottom = win_pos.y + (r.height as f64 * scale) as i32 + pad_y_bottom + hyst;
+                let island = crate::notch_geometry::Rect::new(
+                    win_pos.x + (r.x as f64 * scale) as i32,
+                    win_pos.y + (r.y as f64 * scale) as i32,
+                    (r.width as f64 * scale) as i32,
+                    (r.height as f64 * scale) as i32,
+                );
+                let pads = crate::notch_geometry::Pads { side: pad_x, far: pad_y_bottom, hyst };
+                let bx = crate::notch_geometry::interactive_box(notch_pos, (win_pos.x, win_pos.y), island, pads);
+                let (rx, rw, ry_top, ry_bottom) = (bx.x, bx.w, bx.y, bx.y + bx.h);
 
                 let notch_hidden = crate::state::get_flag(crate::state::notch_hidden(), &label);
                 let hover_active = is_notch_hovered
@@ -2817,14 +2829,13 @@ fn hit_test_extra_notch_windows(app_handle: &AppHandle, cursor: windows::Win32::
                 }
 
                 let edge_pad = (60.0 * scale) as i32;
-                if !fg_fs && in_top_band && (!notch_hidden || hover_active)
-                    && cursor.x >= rx - edge_pad && cursor.x <= rx + rw + edge_pad {
+                let over_span = crate::notch_geometry::near_edge_span(notch_pos, bx, edge_pad, cursor.x, cursor.y);
+                if !fg_fs && in_top_band && (!notch_hidden || hover_active) && over_span {
                     is_click_interactive = true;
                 }
 
                 if left_button_held() {
-                    let over_span = cursor.x >= rx - edge_pad && cursor.x <= rx + rw + edge_pad;
-                    let over_box = cursor.x >= rx && cursor.x <= rx + rw && cursor.y >= ry_top && cursor.y <= ry_bottom;
+                    let over_box = bx.contains(cursor.x, cursor.y);
                     if over_box || (in_top_band && over_span) {
                         is_click_interactive = true;
                     }
@@ -3052,7 +3063,10 @@ pub fn register_appbar(window: tauri::WebviewWindow) {
         let hwnd = window.hwnd().unwrap();
         let scale = monitor.scale_factor();
         let nectar_scale = crate::utils::get_nectar_scale(window.app_handle());
-        let ph = ((420.0 * nectar_scale) * scale) as i32;
+        let depth = ((420.0 * nectar_scale) * scale) as i32;
+        let mon = crate::notch_geometry::Rect::new(m_pos.x, m_pos.y, m_size.width as i32, m_size.height as i32);
+        let strip = crate::notch_geometry::window_rect(crate::notch_geometry::notch_position(window.app_handle()), mon, depth);
+        let ph = strip.h;
 
         unsafe {
             use windows::Win32::UI::WindowsAndMessaging::{SetWindowPos, GetWindowRect, SWP_NOZORDER, SWP_NOACTIVATE, GetWindowLongPtrW, SetWindowLongPtrW, GWL_EXSTYLE, WS_EX_TOOLWINDOW, WS_EX_NOACTIVATE as WS_EX_NA, SWP_FRAMECHANGED};
@@ -3065,9 +3079,9 @@ pub fn register_appbar(window: tauri::WebviewWindow) {
 
             crate::state::set_flag(crate::state::main_appbar_registered(), &label, true);
 
-            let target_left = m_pos.x;
-            let target_top = m_pos.y;
-            let target_width = m_size.width as i32;
+            let target_left = strip.x;
+            let target_top = strip.y;
+            let target_width = strip.w;
 
             let mut current_rect = RECT::default();
             let mut already_positioned = false;
