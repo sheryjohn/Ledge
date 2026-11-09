@@ -2064,7 +2064,8 @@ fn setup_volume_mixer_watchdog(app_handle: AppHandle) {
             .is_some_and(|m| {
                 let pos = m.position();
                 let size = m.size();
-                let on_right = crate::utils::get_setting_str(&app_handle, "nectar-volume-side").as_deref() == Some("right");
+                let on_right = crate::utils::get_setting_str(&app_handle, "nectar-volume-side").as_deref() == Some("right")
+                    || crate::notch_geometry::notch_position(&app_handle) == crate::notch_geometry::NotchPosition::Left;
                 let in_band = if on_right { pt.x >= pos.x + size.width as i32 - 8 && pt.x <= pos.x + size.width as i32 } else { pt.x >= pos.x && pt.x <= pos.x + 8 };
                 in_band && pt.y >= pos.y && pt.y <= pos.y + size.height as i32
             });
@@ -2459,8 +2460,10 @@ unsafe fn process_mouse_move(app_handle: &AppHandle, cursor: windows::Win32::Fou
             // The overlay zooms by nectar-scale, so the cards are bigger than 42x196 off the default scale.
             let overlay_nectar_scale = crate::utils::get_nectar_scale(app_handle);
 
+            // A left-edge notch owns the left edge, so both HUDs move to the right (Overlay.tsx does the same).
+            let left_taken = notch_pos == crate::notch_geometry::NotchPosition::Left;
             let side_of = |key: &str, default: &str| -> bool {
-                crate::utils::get_setting_str(app_handle, key).unwrap_or_else(|| default.to_string()) == "right"
+                left_taken || crate::utils::get_setting_str(app_handle, key).unwrap_or_else(|| default.to_string()) == "right"
             };
             let edge_dwell = crate::utils::get_setting_str(app_handle, "nectar-edge-delay")
                 .and_then(|v| v.parse::<i64>().ok())
@@ -2535,7 +2538,7 @@ unsafe fn process_mouse_move(app_handle: &AppHandle, cursor: windows::Win32::Fou
                         MH_LAST_OV_IGNORE.store(1, Ordering::Relaxed);
                     }
                 } else {
-                    let over_left = in_mixer || if let Ok(Some(m)) = ov_win.primary_monitor() {
+                    let over_left = in_mixer || if left_taken { false } else if let Ok(Some(m)) = ov_win.primary_monitor() {
                         let ms = m.size();
                         let mp = m.position();
                         let sc = m.scale_factor() * overlay_nectar_scale;

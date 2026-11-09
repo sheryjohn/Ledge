@@ -718,6 +718,8 @@ function OverlayApp() {
   const [brightness, setBrightness] = useState(50);
   const [volumeSide, setVolumeSide] = useState<Side>(() => asSide(localStorage.getItem("nectar-volume-side"), "left"));
   const [brightnessSide, setBrightnessSide] = useState<Side>(() => asSide(localStorage.getItem("nectar-brightness-side"), "right"));
+  // Ledge: a left-edge notch owns the left edge, so both HUDs use the right edge then.
+  const [notchOnLeft, setNotchOnLeft] = useState(() => localStorage.getItem("nectar-notch-position") === "left");
   const [brightnessOverlayEnabled, setBrightnessOverlayEnabled] = useState(() => localStorage.getItem("nectar-brightness-overlay-enabled") !== "false");
   const [brightnessEdgeEnabled, setBrightnessEdgeEnabled] = useState(() => localStorage.getItem("nectar-brightness-edge-enabled") !== "false");
 
@@ -757,6 +759,7 @@ function OverlayApp() {
       }
       if (settings && settings["nectar-volume-side"] !== undefined) setVolumeSide(asSide(String(settings["nectar-volume-side"]), "left"));
       if (settings && settings["nectar-brightness-side"] !== undefined) setBrightnessSide(asSide(String(settings["nectar-brightness-side"]), "right"));
+      if (settings && settings["nectar-notch-position"] !== undefined) setNotchOnLeft(String(settings["nectar-notch-position"]) === "left");
       if (settings && settings["nectar-volume-overlay-enabled"] !== undefined) {
         setVolumeOverlayEnabled(settings["nectar-volume-overlay-enabled"] === "true");
       }
@@ -912,6 +915,7 @@ function OverlayApp() {
       "nectar-brightness-edge-enabled": setBrightnessEdgeEnabled,
       "nectar-volume-side": (v: string) => setVolumeSide(asSide(v, "left")),
       "nectar-brightness-side": (v: string) => setBrightnessSide(asSide(v, "right")),
+      "nectar-notch-position": (v: string) => setNotchOnLeft(String(v) === "left"),
       "nectar-scale": setScale,
     }
   );
@@ -1092,7 +1096,7 @@ function OverlayApp() {
                 onVolumeChange={handleVolumeChange}
                 mixerExpanded={mixerExpanded}
                 onMixerExpandedChange={handleMixerExpandedChange}
-                side={volumeSide}
+                side={notchOnLeft ? "right" : volumeSide}
                 key="volume-island"
               />
             )}
@@ -1100,7 +1104,7 @@ function OverlayApp() {
               <BrightnessNotch
                 brightness={brightness}
                 onBrightnessChange={handleBrightnessChange}
-                side={brightnessSide}
+                side={notchOnLeft ? "right" : brightnessSide}
                 key="brightness-island"
               />
             )}
