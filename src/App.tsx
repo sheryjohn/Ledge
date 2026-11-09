@@ -53,6 +53,11 @@ import { setVisibleInterval } from "./hooks/visibleInterval";
 // together without overshooting or wobbling.
 const SHELL_SPRING = { type: "spring", stiffness: 400, damping: 40 } as const;
 
+// Ledge: left-edge notch.
+type NotchPosition = "top" | "left";
+const parseNotchPosition = (v: string | null): NotchPosition => (v === "left" ? "left" : "top");
+const LEFT_PILL = { width: 14, height: 120 } as const;
+
 // Timer chime, synthesized with Web Audio so there's no asset. The context is made on the
 // Start click so autoplay lets it play when the timer ends.
 let timerChimeCtx: AudioContext | null = null;
@@ -423,6 +428,10 @@ function App() {
     if (raw === "auto-hide") return "smart";
     return raw;
   });
+  // Ledge: which screen edge the notch hugs. "top" keeps upstream Nectar behaviour.
+  const [notchPosition, setNotchPosition] = useState<NotchPosition>(() => parseNotchPosition(localStorage.getItem("nectar-notch-position")));
+  const isLeft = notchPosition === "left";
+  const notchPositionInitial = useRef(true);
 
 
   useEffect(() => {
@@ -990,6 +999,7 @@ function App() {
       "nectar-dock-monitor-mode": refreshDockMode,
       "nectar-dock-monitor-id": refreshDockMode,
       "nectar-notch-mode": refreshNotchMode,
+      "nectar-notch-position": (v) => setNotchPosition(parseNotchPosition(v === null || v === undefined ? null : String(v))),
       "nectar-notch-mode-by-monitor": refreshNotchMode,
       "nectar-notch-monitor-mode": refreshNotchMode,
       "nectar-notch-monitor-id": refreshNotchMode,
@@ -1035,6 +1045,13 @@ function App() {
     if (notchModeInitial.current) { notchModeInitial.current = false; return; }
     invoke("change_notch_mode", { mode: notchMode });
   }, [notchMode, windowLabel]);
+
+  // Side effects: notch-position (skip first render). Re-running the mode init repositions the window strip.
+  useEffect(() => {
+    if (windowLabel !== 'main') return;
+    if (notchPositionInitial.current) { notchPositionInitial.current = false; return; }
+    invoke("change_notch_mode", { mode: notchMode });
+  }, [notchPosition, windowLabel]);
 
   const [tourStep, setTourStep] = useState(0);
   const tourAutoStartedRef = useRef(false);
@@ -2036,6 +2053,8 @@ function App() {
   };
 
   const isCalendarMode = nectarMode === 'calendar';
+  // Left edge: the island is a thin vertical pill until hovered (or while hidden).
+  const leftCollapsed = isLeft && (!isExpanded || isHidden || !isHovered);
   // Calendar, command center and shelf are big, dense panels; glass styles thicken the fill for them
   const isPanelOpen = isHovered && (isCalendarMode || nectarMode === 'command-center' || nectarMode === 'shelf');
 
@@ -2069,10 +2088,10 @@ function App() {
 
 
   return (
-    <div className="screen" style={{ overflow: 'hidden' }}>
+    <div className="screen" style={{ overflow: 'hidden', ...(isLeft ? { justifyContent: 'flex-start', alignItems: 'center' } : {}) }}>
       {/* Screen Corners (Top) */}
       <AnimatePresence>
-        {isVisible && settingsCornersEnabled && (
+        {isVisible && settingsCornersEnabled && !isLeft && (
           <>
             <motion.div
               className="screen-corner top-left"
@@ -2090,15 +2109,31 @@ function App() {
         )}
       </AnimatePresence>
 
-      <div style={{ zoom: scale, width: '100%', display: 'flex', justifyContent: 'center' }}>
+      <div style={isLeft
+        ? { zoom: scale, height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'flex-start' }
+        : { zoom: scale, width: '100%', display: 'flex', justifyContent: 'center' }}>
         <motion.div
           ref={nectarRef}
           className={`nectar ${isHovered ? 'expanded' : ''} ${isImpacted ? 'is-impacted' : ''} ${isPanelOpen ? 'panel-open' : ''}`}
           onMouseEnter={() => setIsNotchHovered(true)}
         onMouseLeave={() => setIsNotchHovered(false)}
         onWheel={handleWheel}
-        initial={{ y: 250, width: 30.6, height: 44.2, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderBottomLeftRadius: 18, borderBottomRightRadius: 18, scaleX: 1, scaleY: 1, opacity: 0 }}
-        animate={{
+        initial={{ x: 0, y: isLeft ? 0 : 250, width: 30.6, height: 44.2, borderTopLeftRadius: 18, borderTopRightRadius: 18, borderBottomLeftRadius: 18, borderBottomRightRadius: 18, scaleX: 1, scaleY: 1, opacity: 0 }}
+        animate={isLeft ? {
+          // Left edge: hide by sliding left, collapse to a thin vertical pill, grow rightward.
+          x: !isReady ? -250 : (isHidden ? -100 : 0),
+          y: 0,
+          width: !isReady ? 34 : (leftCollapsed ? LEFT_PILL.width : getDynamicWidth()),
+          height: !isReady ? 34 : (leftCollapsed ? LEFT_PILL.height : getDynamicHeight()),
+          opacity: isReady ? 1 : 0,
+          scaleX: 1,
+          scaleY: 1,
+          borderTopLeftRadius: isImpacted ? 0 : 18,
+          borderBottomLeftRadius: isImpacted ? 0 : 18,
+          borderTopRightRadius: isCalendarMode ? 28 : 18,
+          borderBottomRightRadius: isCalendarMode ? 28 : 18,
+        } : {
+          x: 0,
           y: !isReady ? 250 : (isHidden ? -100 : 0),
           width: !isReady ? 34 : (isExpanded && !isHidden ? getDynamicWidth() : (isImpacted ? 39.1 : 30.6)),
           height: !isReady ? 34 : getDynamicHeight(),
@@ -2138,10 +2173,11 @@ function App() {
             setNectarMode(targetMode);
           }
         }}
-        style={{ originY: 0, ...musicTint }}
+        style={{ ...(isLeft ? { originX: 0 } : { originY: 0 }), ...musicTint }}
         transition={{
           width: SHELL_SPRING,
           height: SHELL_SPRING,
+          x: { type: "spring", stiffness: 550, damping: 45, mass: 0.8, restDelta: 0.001 },
           y: { type: "spring", stiffness: 550, damping: 45, mass: 0.8, restDelta: 0.001 },
           opacity: { duration: 0.2 },
           borderTopLeftRadius: SHELL_SPRING,
@@ -2154,7 +2190,7 @@ function App() {
         {widgetTip && isHovered && <div className="widget-tip">{widgetTip}</div>}
 
         <AnimatePresence mode="wait">
-          {isExpanded && (
+          {isExpanded && !leftCollapsed && (
             <motion.div
               key="nectar-content"
               initial={{ opacity: 0 }}
