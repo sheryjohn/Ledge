@@ -242,7 +242,7 @@
   "about.hitbox": "Dock ve Çentik Tıklamalarını Günlüğe Kaydet",
   "about.hitbox.desc": "Açın, dock ve çentik üzerinde birkaç saniye gezinin, ardından tanılamayı kopyalayın. Yeniden başlatmada sıfırlanır",
   "about.danger.group": "Tehlikeli Bölge",
-  "about.footer": "kua8 tarafından ❤️ ile yapıldı",
+  "about.footer": "Ledge, kua8 tarafından geliştirilen Nectar'ın bir çatalıdır; Nectar da Sehajveer Singh'in Bloom projesinin çatalıdır. GPL-3.0 lisanslı özgür yazılım.",
   "calsync.guide.google.step1": "Web'de Google Takvim'i açın (calendar.google.com).",
   "calsync.guide.google.step2": "Sol listedeki takvimin üzerine gelin, üç nokta menüsüne ve ardından Ayarlar ve paylaşım'a tıklayın.",
   "calsync.guide.google.step3": "Takvimi entegre et bölümüne kaydırın ve iCal biçimindeki Gizli adresi kopyalayın.",

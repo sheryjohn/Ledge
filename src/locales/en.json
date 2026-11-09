@@ -309,7 +309,7 @@
   "about.hitbox": "Log Dock and Notch Clicks",
   "about.hitbox.desc": "Turn on, move over the dock and notch for a few seconds, then copy diagnostics. Resets on restart",
   "about.danger.group": "Danger Zone",
-  "about.footer": "Made with ❤️ by kua8",
+  "about.footer": "Ledge is a fork of Nectar by kua8, which is a fork of Bloom by Sehajveer Singh. Free software under the GPL-3.0 licence.",
   "calsync.guide.google.step1": "Open Google Calendar on the web (calendar.google.com).",
   "calsync.guide.google.step2": "Hover the calendar in the left list, click the three-dot menu, then Settings and sharing.",
   "calsync.guide.google.step3": "Scroll to Integrate calendar and copy the Secret address in iCal format.",
