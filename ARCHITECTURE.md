@@ -82,3 +82,20 @@ Open:
 - `isImpacted` (the flattened, wider top notch) has no left-edge meaning yet; it only flattens the left corners.
 
 Not changed in Phase 1: the dock, the overlay HUD geometry itself, multi-monitor selection, and all mode content.
+
+## Phase 2 plan: Performance panel
+
+Backend, new module `src-tauri/src/perf.rs`:
+
+- Adds the `sysinfo` crate (0.33). A dedicated thread samples CPU (total and per core), memory and swap, each fixed disk (total, free, read and write bytes per second), network receive and transmit bytes per second summed over interfaces, and the process list (name, PID, CPU, memory).
+- Process CPU is normalised by core count so it matches Task Manager, where all cores at full load read 100 %. PID 0 (System Idle Process) is skipped.
+- The thread only samples while a notch window says the panel is open, through the `set_perf_active` command. Otherwise it parks, so Ledge costs nothing while hidden.
+- Each sample is emitted to all windows as the `perf-snapshot` event. It carries the top N processes by CPU and the top N by memory, so the frontend can switch sort without a round trip.
+- Settings: `nectar-perf-interval-ms` (default 1000, clamped to 500 to 5000) and `nectar-perf-top-n` (default 8, clamped to 3 to 20).
+- Kill reuses the existing `kill_process` command (PID based, verifies the image name, refuses protected system processes).
+
+Frontend:
+
+- `src/hooks/usePerf.ts` subscribes to `perf-snapshot`, keeps a ring buffer of the last 90 samples for sparklines, and toggles `set_perf_active` with the panel's visibility.
+- `src/components/PerformancePanel.tsx` renders the header row of four numbers (CPU, memory, disk, network), CPU and memory sparklines, one bar per fixed disk, and the process list with a sort toggle and a kill button per row.
+- `performance` becomes a notch mode, first in the default panel order, the mode shown on reveal, and switchable off in Settings like the other panels.
