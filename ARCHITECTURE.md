@@ -158,3 +158,23 @@ The headline tiles, sparklines and disk bars take the colour. The collapsed left
 ### Polish
 
 - Translations of the Ledge strings into the five other bundled languages.
+
+## Phase 3 status
+
+Done: the rename map above, updater pointed at the fork, uninstall safety tests, Ledge text in all six languages with translations of every Ledge string, credits in README and About, and threshold colours including the collapsed pill. Nectar's original README is kept at `docs/NECTAR-README.md`.
+
+Not done from the optional list: pinning the panel open, a gauges-only collapsed state and a per-mode default on reveal. The existing "Remember last panel" setting covers part of the last one. The em dashes in upstream locale strings are left as upstream wrote them.
+
+### Known gap: numbers differ from Task Manager
+
+Measured on the authoring machine, `sysinfo` and Task Manager read different counters:
+
+| Metric | Ledge today | Task Manager | Effect |
+|--------|-------------|--------------|--------|
+| CPU total | `% Processor Time` | `% Processor Utility`, which scales by clock speed | Differed by 17 points under load (97 vs 79) |
+| Process memory | Working set, shared pages included | Private working set | Ledge reads higher per process |
+| Process list | One row per process | Grouped by app on the Processes tab | A browser shows as many smaller rows |
+| Network | Bytes per second, summed over every interface | Bits per second, per adapter | Factor of 8, plus virtual adapters |
+| Swap | Page file size from `GlobalMemoryStatusEx` | Committed memory | Different concept |
+
+Matching Task Manager means reading `\Processor Information(_Total)\% Processor Utility` through PDH, private working set per process, showing network in bits per second for physical adapters only, and optionally grouping processes by executable name.
