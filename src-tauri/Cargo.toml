@@ -24,6 +24,8 @@ tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
 windows-core = "0.61"
+# Ledge: Performance panel sampling.
+sysinfo = "0.33.1"
 windows = { version = "0.61", features = [
   "Win32_UI_Input_KeyboardAndMouse",
   "Win32_UI_Shell",

@@ -33,6 +33,7 @@ mod on_demand_windows;
 mod wallpaper;
 mod live_preview;
 mod notch_geometry;
+mod perf;
 
 use tauri::Manager;
 use windows::Win32::System::Console::SetConsoleCtrlHandler;
@@ -251,6 +252,7 @@ fn main() {
             get_network_speed,
             get_running_processes,
             kill_process,
+            perf::set_perf_active,
             export_settings,
             import_settings,
             reset_settings,
@@ -339,6 +341,8 @@ fn main() {
 
             watch_webview_processes(app.handle());
             setup_mouse_hook(app.handle().clone());
+            // Ledge: Performance panel sampler. Idle until a panel asks for data.
+            perf::start(app.handle().clone());
             setup_display_change_monitor(app.handle().clone());
             setup_window_change_hook(app.handle().clone());
             attention::start(app.handle().clone());
