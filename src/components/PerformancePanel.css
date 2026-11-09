@@ -184,8 +184,8 @@
 }
 
 .perf-sort button.active {
-    background: var(--nectar-highlight);
-    color: var(--nectar-on-highlight);
+    background: var(--nectar-highlight, var(--nectar-text, white));
+    color: var(--nectar-on-highlight, var(--nectar-bg-expanded, black));
 }
 
 .perf-procs {
