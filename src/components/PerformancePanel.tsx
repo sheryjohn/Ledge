@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { X } from "lucide-react";
 import { useT } from "../i18n";
-import { formatBytes, formatRate, levelsFor, percent, sparkPaths, type Level, type Point, type ProcInfo } from "../perfFormat";
+import { formatBits, formatBytes, formatRate, levelsFor, percent, sparkPaths, type Level, type Point, type ProcInfo } from "../perfFormat";
 import type { PerfState } from "../hooks/usePerf";
 import "./PerformancePanel.css";
 
@@ -129,9 +129,9 @@ export function PerformancePanel({ perf }: { perf: PerfState }) {
           <span className="perf-stat-label">{t("perf.disk")}</span>
           <span className="perf-stat-value">{formatRate(s.disk_read_bps + s.disk_write_bps)}</span>
         </div>
-        <div className="perf-stat" title={`${t("perf.down")} ${formatRate(s.net_rx_bps)}, ${t("perf.up")} ${formatRate(s.net_tx_bps)}`}>
+        <div className="perf-stat" title={`${t("perf.down")} ${formatBits(s.net_rx_bps)}, ${t("perf.up")} ${formatBits(s.net_tx_bps)}`}>
           <span className="perf-stat-label">{t("perf.network")}</span>
-          <span className="perf-stat-value">{formatRate(s.net_rx_bps + s.net_tx_bps)}</span>
+          <span className="perf-stat-value">{formatBits(s.net_rx_bps + s.net_tx_bps)}</span>
         </div>
       </div>
 
@@ -139,9 +139,9 @@ export function PerformancePanel({ perf }: { perf: PerfState }) {
         <Sparkline label={t("perf.cpu")} value={`${s.cpu_cores.length} ${t("perf.cores")}`} points={perf.cpuHist} level={lv.cpu} />
         <Sparkline
           label={t("perf.memory")}
-          value={s.swap_total > 0 ? `${formatBytes(s.mem_used)} · ${t("perf.swap")} ${formatBytes(s.swap_used)}` : formatBytes(s.mem_used)}
+          value={s.commit_total > 0 ? `${formatBytes(s.mem_used)} · ${t("perf.committed")} ${formatBytes(s.commit_used)}` : formatBytes(s.mem_used)}
           points={perf.memHist}
-          extra={s.swap_total > 0 ? perf.swapHist : undefined}
+          extra={s.commit_total > 0 ? perf.commitHist : undefined}
           level={lv.mem}
         />
       </div>

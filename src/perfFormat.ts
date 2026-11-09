@@ -18,8 +18,8 @@ export type PerfSnapshot = {
   cpu_cores: number[];
   mem_used: number;
   mem_total: number;
-  swap_used: number;
-  swap_total: number;
+  commit_used: number;
+  commit_total: number;
   disks: DiskInfo[];
   disk_read_bps: number;
   disk_write_bps: number;
@@ -50,6 +50,20 @@ export function formatBytes(n: number): string {
 
 export function formatRate(bps: number): string {
   return `${formatBytes(bps)}/s`;
+}
+
+const BIT_UNITS = ["Kbps", "Mbps", "Gbps", "Tbps"];
+
+/** Network speed as Task Manager shows it: bytes per second in, decimal bits out, never below Kbps. */
+export function formatBits(bytesPerSec: number): string {
+  if (!Number.isFinite(bytesPerSec) || bytesPerSec <= 0) return "0 Kbps";
+  let v = (bytesPerSec * 8) / 1000;
+  let i = 0;
+  while (v >= 1000 && i < BIT_UNITS.length - 1) {
+    v /= 1000;
+    i++;
+  }
+  return `${v.toFixed(v >= 10 ? 0 : 1)} ${BIT_UNITS[i]}`;
 }
 
 export function percent(used: number, total: number): number {

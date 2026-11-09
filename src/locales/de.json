@@ -665,7 +665,7 @@
   "perf.network": "Netzwerk",
   "perf.processes": "Prozesse",
   "perf.cores": "Kerne",
-  "perf.swap": "Auslagerung",
+  "perf.committed": "Zugesichert",
   "perf.free": "frei",
   "perf.read": "Lesen",
   "perf.write": "Schreiben",

@@ -1,6 +1,6 @@
 // Run: node --experimental-strip-types scripts/perf-format.test.mts
 import assert from "node:assert/strict";
-import { formatBytes, formatRate, percent, pushPoint, sparkPaths, panelBodyHeight } from "../src/perfFormat.ts";
+import { formatBits, formatBytes, formatRate, percent, pushPoint, sparkPaths, panelBodyHeight } from "../src/perfFormat.ts";
 
 assert.equal(formatBytes(0), "0 B");
 assert.equal(formatBytes(512), "512 B");
@@ -8,6 +8,10 @@ assert.equal(formatBytes(1536), "1.5 KB");
 assert.equal(formatBytes(15 * 1024 * 1024), "15 MB");
 assert.equal(formatBytes(8.4 * 1024 ** 3), "8.4 GB");
 assert.equal(formatRate(2048), "2.0 KB/s");
+assert.equal(formatBits(0), "0 Kbps");
+assert.equal(formatBits(634), "5.1 Kbps");
+assert.equal(formatBits(1_500_000), "12 Mbps");
+assert.equal(formatBits(125_000_000), "1.0 Gbps");
 assert.equal(percent(50, 200), 25);
 assert.equal(percent(5, 0), 0);
 assert.equal(percent(300, 200), 100);

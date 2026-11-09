@@ -13,10 +13,10 @@ export type PerfState = {
   processCount: number;
   cpuHist: Point[];
   memHist: Point[];
-  swapHist: Point[];
+  commitHist: Point[];
 };
 
-const EMPTY: PerfState = { snap: null, topCpu: [], topMem: [], processCount: 0, cpuHist: [], memHist: [], swapHist: [] };
+const EMPTY: PerfState = { snap: null, topCpu: [], topMem: [], processCount: 0, cpuHist: [], memHist: [], commitHist: [] };
 
 /**
  * Ledge Performance data. `listening` subscribes to perf-snapshot (the notch window only);
@@ -38,7 +38,7 @@ export function usePerf(listening: boolean, active: boolean): PerfState {
           processCount: s.has_processes ? s.process_count : prev.processCount,
           cpuHist: pushPoint(prev.cpuHist, { t, v: s.cpu_total }, HISTORY_CAP),
           memHist: pushPoint(prev.memHist, { t, v: percent(s.mem_used, s.mem_total) }, HISTORY_CAP),
-          swapHist: pushPoint(prev.swapHist, { t, v: percent(s.swap_used, s.swap_total) }, HISTORY_CAP),
+          commitHist: pushPoint(prev.commitHist, { t, v: percent(s.commit_used, s.commit_total) }, HISTORY_CAP),
         };
       });
     });

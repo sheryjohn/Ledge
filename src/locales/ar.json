@@ -665,7 +665,7 @@
   "perf.network": "الشبكة",
   "perf.processes": "العمليات",
   "perf.cores": "أنوية",
-  "perf.swap": "ملف التبديل",
+  "perf.committed": "المحجوزة",
   "perf.free": "متاح",
   "perf.read": "قراءة",
   "perf.write": "كتابة",

@@ -665,7 +665,7 @@
   "perf.network": "Réseau",
   "perf.processes": "Processus",
   "perf.cores": "cœurs",
-  "perf.swap": "Fichier d'échange",
+  "perf.committed": "Validée",
   "perf.free": "libre",
   "perf.read": "Lecture",
   "perf.write": "Écriture",

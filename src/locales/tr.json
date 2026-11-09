@@ -665,7 +665,7 @@
   "perf.network": "Ağ",
   "perf.processes": "İşlemler",
   "perf.cores": "çekirdek",
-  "perf.swap": "Takas",
+  "perf.committed": "Kaydedilen",
   "perf.free": "boş",
   "perf.read": "Okuma",
   "perf.write": "Yazma",

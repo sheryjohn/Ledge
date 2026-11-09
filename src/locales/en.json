@@ -110,7 +110,7 @@
   "perf.network": "Network",
   "perf.processes": "Processes",
   "perf.cores": "cores",
-  "perf.swap": "Swap",
+  "perf.committed": "Committed",
   "perf.free": "free",
   "perf.read": "Read",
   "perf.write": "Write",

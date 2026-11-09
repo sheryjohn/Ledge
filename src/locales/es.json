@@ -665,7 +665,7 @@
   "perf.network": "Red",
   "perf.processes": "Procesos",
   "perf.cores": "núcleos",
-  "perf.swap": "Intercambio",
+  "perf.committed": "Confirmada",
   "perf.free": "libre",
   "perf.read": "Lectura",
   "perf.write": "Escritura",
