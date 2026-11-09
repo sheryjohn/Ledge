@@ -2166,8 +2166,9 @@ function App() {
             const remembered = settingsRememberMode ? rememberedModeRef.current : null;
             if (agentNeedsYou) setNectarMode('agent');
             else if (remembered && availableNotchModes().includes(remembered)) setNectarMode(remembered);
-            // Ledge: Performance is the default panel on reveal.
-            else if (panelPerformance && isNotchWindow) setNectarMode('performance');
+            // Ledge: Performance is the default panel on reveal. Not during the tour, whose card
+            // sits under the island and would be cut off by the tall panel.
+            else if (panelPerformance && isNotchWindow && !tourActive) setNectarMode('performance');
             else setNectarMode(mediaInfo.has_media && isPlaying ? 'music' : 'status');
           }
         }}
