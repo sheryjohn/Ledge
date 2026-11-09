@@ -1,0 +1,262 @@
+/* Ledge Performance panel. Sits under the 36px notch header row, like the shelf. */
+
+.perf-panel {
+    position: absolute;
+    top: 36px;
+    left: 0;
+    width: 100%;
+    height: calc(100% - 36px);
+    box-sizing: border-box;
+    z-index: 2;
+    padding: 4px 14px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: var(--nectar-text);
+    font-variant-numeric: tabular-nums;
+    overflow: hidden;
+}
+
+.perf-waiting {
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--nectar-text-muted);
+}
+
+.perf-num {
+    font-variant-numeric: tabular-nums;
+    color: var(--nectar-text-muted);
+    white-space: nowrap;
+}
+
+.perf-num.strong {
+    color: var(--nectar-text);
+}
+
+/* Four headline numbers */
+.perf-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+    height: 34px;
+    flex-shrink: 0;
+}
+
+.perf-stat {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 8px;
+    border-radius: 10px;
+    background: var(--nectar-group-bg);
+    min-width: 0;
+}
+
+.perf-stat-label {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--nectar-text-muted);
+}
+
+.perf-stat-value {
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Sparklines */
+.perf-sparks {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.perf-spark {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.perf-spark-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--nectar-text-muted);
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.perf-spark svg {
+    width: 100%;
+    height: 28px;
+    display: block;
+}
+
+.perf-spark-line {
+    fill: none;
+    stroke: var(--nectar-accent, #007aff);
+    stroke-width: 1.5;
+    vector-effect: non-scaling-stroke;
+    stroke-linejoin: round;
+}
+
+.perf-spark-line.secondary {
+    stroke: var(--nectar-text-muted);
+    stroke-dasharray: 3 2;
+}
+
+.perf-spark-area {
+    fill: var(--nectar-accent, #007aff);
+    opacity: 0.18;
+}
+
+/* Disks */
+.perf-disks {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.perf-disk {
+    display: grid;
+    grid-template-columns: 26px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    height: 14px;
+    font-size: 10.5px;
+}
+
+.perf-disk-name {
+    font-weight: 600;
+}
+
+.perf-bar {
+    height: 5px;
+    border-radius: 3px;
+    background: var(--nectar-group-bg);
+    overflow: hidden;
+}
+
+.perf-bar-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: var(--nectar-accent, #007aff);
+    transition: width 0.4s ease;
+}
+
+/* Process list */
+.perf-list-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 20px;
+    font-size: 10.5px;
+    color: var(--nectar-text-muted);
+    flex-shrink: 0;
+}
+
+.perf-sort {
+    display: flex;
+    gap: 2px;
+    padding: 2px;
+    border-radius: 8px;
+    background: var(--nectar-group-bg);
+}
+
+.perf-sort button {
+    border: 0;
+    background: transparent;
+    color: var(--nectar-text-muted);
+    font: inherit;
+    font-size: 10px;
+    padding: 1px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.perf-sort button.active {
+    background: var(--nectar-highlight);
+    color: var(--nectar-on-highlight);
+}
+
+.perf-procs {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.perf-proc {
+    display: grid;
+    grid-template-columns: 1fr 48px 62px 20px;
+    align-items: center;
+    gap: 6px;
+    height: 22px;
+    padding: 0 4px 0 6px;
+    border-radius: 7px;
+    font-size: 11.5px;
+}
+
+.perf-proc:hover {
+    background: var(--nectar-group-bg);
+}
+
+.perf-proc .perf-num {
+    text-align: right;
+}
+
+.perf-proc-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.perf-kill {
+    width: 20px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border: 0;
+    border-radius: 5px;
+    background: transparent;
+    color: var(--nectar-text-muted);
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s ease, background 0.12s ease, width 0.12s ease;
+}
+
+.perf-proc:hover .perf-kill,
+.perf-kill:focus-visible {
+    opacity: 1;
+}
+
+.perf-kill:hover {
+    background: rgba(255, 69, 58, 0.22);
+    color: #ff453a;
+}
+
+.perf-proc.confirming {
+    grid-template-columns: 1fr 48px 62px 34px;
+}
+
+.perf-proc.confirming .perf-kill {
+    opacity: 1;
+    width: 34px;
+    background: #ff453a;
+    color: #fff;
+}
+
+.perf-kill-confirm {
+    font-size: 9.5px;
+    font-weight: 700;
+}
