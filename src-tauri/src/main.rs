@@ -34,6 +34,7 @@ mod wallpaper;
 mod live_preview;
 mod notch_geometry;
 mod perf;
+mod winperf;
 
 use tauri::Manager;
 use windows::Win32::System::Console::SetConsoleCtrlHandler;

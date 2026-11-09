@@ -27,7 +27,8 @@ pub struct ProcInfo {
     pub name: String,
     /// Percent of the whole machine, 0 to 100, like Task Manager.
     pub cpu: f32,
-    /// Resident memory in bytes.
+    /// Private working set in bytes (Task Manager's Memory column), or the full working set
+    /// when the private figure could not be read.
     pub mem: u64,
 }
 
@@ -48,11 +49,13 @@ pub struct PerfSnapshot {
     pub cpu_cores: Vec<f32>,
     pub mem_used: u64,
     pub mem_total: u64,
-    pub swap_used: u64,
-    pub swap_total: u64,
+    /// Committed memory and the commit limit, as on Task Manager's Memory page.
+    pub commit_used: u64,
+    pub commit_total: u64,
     pub disks: Vec<DiskInfo>,
     pub disk_read_bps: u64,
     pub disk_write_bps: u64,
+    /// Bytes per second over physical adapters only. The panel shows bits per second.
     pub net_rx_bps: u64,
     pub net_tx_bps: u64,
     /// False for light samples; the process fields are then empty and should be ignored.
@@ -144,6 +147,8 @@ struct Sampler {
     disks: Disks,
     networks: Networks,
     last: Instant,
+    cpu_util: Option<crate::winperf::CpuUtility>,
+    last_net: Option<(u64, u64)>,
 }
 
 impl Sampler {
@@ -157,6 +162,8 @@ impl Sampler {
             disks: Disks::new_with_refreshed_list(),
             networks: Networks::new_with_refreshed_list(),
             last: Instant::now(),
+            cpu_util: crate::winperf::CpuUtility::open(),
+            last_net: crate::winperf::physical_net_octets(),
         }
     }
 
@@ -175,6 +182,11 @@ impl Sampler {
 
         let cores = self.sys.cpus().len();
         let cpu_cores: Vec<f32> = self.sys.cpus().iter().map(|c| c.cpu_usage()).collect();
+        let cpu_time = self.sys.global_cpu_usage();
+        let cpu_util = self.cpu_util.as_mut().and_then(|c| c.read());
+        let cpu_total = cpu_util.map(|u| u as f32).unwrap_or(cpu_time);
+        let proc_scale = cpu_util.map(|u| crate::winperf::utility_scale(u, cpu_time)).unwrap_or(1.0);
+        let private_ws = if with_processes { crate::winperf::private_working_sets() } else { None };
 
         let procs: Vec<ProcInfo> = if !with_processes { Vec::new() } else { self
             .sys
@@ -184,8 +196,11 @@ impl Sampler {
             .map(|p| ProcInfo {
                 pid: p.pid().as_u32(),
                 name: p.name().to_string_lossy().into_owned(),
-                cpu: normalize_cpu(p.cpu_usage(), cores),
-                mem: p.memory(),
+                cpu: (normalize_cpu(p.cpu_usage(), cores) * proc_scale).clamp(0.0, 100.0),
+                mem: private_ws
+                    .as_ref()
+                    .and_then(|m| m.get(&p.pid().as_u32()).copied())
+                    .unwrap_or_else(|| p.memory()),
             })
             .collect() };
 
@@ -213,23 +228,37 @@ impl Sampler {
             })
             .collect();
 
-        let (mut rx, mut tx) = (0u64, 0u64);
-        for (_, data) in &self.networks {
-            rx = rx.saturating_add(data.received());
-            tx = tx.saturating_add(data.transmitted());
-        }
+        let (rx, tx) = match (crate::winperf::physical_net_octets(), self.last_net) {
+            (Some(now_net), prev) => {
+                self.last_net = Some(now_net);
+                match prev {
+                    Some((prx, ptx)) => (crate::winperf::counter_delta(prx, now_net.0), crate::winperf::counter_delta(ptx, now_net.1)),
+                    None => (0, 0),
+                }
+            }
+            (None, _) => {
+                let (mut rx, mut tx) = (0u64, 0u64);
+                for (_, data) in &self.networks {
+                    rx = rx.saturating_add(data.received());
+                    tx = tx.saturating_add(data.transmitted());
+                }
+                (rx, tx)
+            }
+        };
+        let (commit_used, commit_total) =
+            crate::winperf::commit_charge().unwrap_or((self.sys.used_swap(), self.sys.total_swap()));
 
         PerfSnapshot {
             ts_ms: std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_millis() as u64)
                 .unwrap_or(0),
-            cpu_total: self.sys.global_cpu_usage(),
+            cpu_total,
             cpu_cores,
             mem_used: self.sys.used_memory(),
             mem_total: self.sys.total_memory(),
-            swap_used: self.sys.used_swap(),
-            swap_total: self.sys.total_swap(),
+            commit_used,
+            commit_total,
             disks,
             disk_read_bps: disk_read,
             disk_write_bps: disk_write,
