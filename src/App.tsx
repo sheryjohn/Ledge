@@ -48,6 +48,9 @@ import {
   EthernetPort,
 } from "lucide-react";
 import { setVisibleInterval } from "./hooks/visibleInterval";
+import { usePerf } from "./hooks/usePerf";
+import { PerformancePanel } from "./components/PerformancePanel";
+import { panelBodyHeight } from "./perfFormat";
 
 // One critically damped spring for the notch's width, height and corners, so the shape settles
 // together without overshooting or wobbling.
@@ -431,6 +434,8 @@ function App() {
   // Ledge: which screen edge the notch hugs. "top" keeps upstream Nectar behaviour.
   const [notchPosition, setNotchPosition] = useState<NotchPosition>(() => parseNotchPosition(localStorage.getItem("nectar-notch-position")));
   const isLeft = notchPosition === "left";
+  // Ledge: the Performance panel, on by default.
+  const [panelPerformance, setPanelPerformance] = useState(() => localStorage.getItem("nectar-panel-performance-enabled") !== "false");
 
 
   useEffect(() => {
@@ -574,7 +579,7 @@ function App() {
   const dockModeInitial = useRef(true);
   const notchModeInitial = useRef(true);
 
-  const [nectarMode, setNectarMode] = useState<'music' | 'calendar' | 'command-center' | 'status' | 'shelf' | 'agent'>('status');
+  const [nectarMode, setNectarMode] = useState<'music' | 'calendar' | 'command-center' | 'status' | 'shelf' | 'agent' | 'performance'>('status');
   const [tourActive, setTourActive] = useState(false);
 
   const isAnyInteraction = isHovered || isNotchHovered || isEdgeHovered;
@@ -583,6 +588,9 @@ function App() {
       (notchMode === 'smart' && isOverlapped && interactionState === 'none') ||
       (notchMode === 'peek' && interactionState === 'none' && !eventPeek)
     ));
+
+  // Ledge: vitals stream into the notch window; full-rate sampling only while the panel shows.
+  const perf = usePerf(isNotchWindow && panelPerformance, isNotchWindow && panelPerformance && isHovered && !isHidden && nectarMode === 'performance');
 
   useEffect(() => {
     if (isAnyInteraction) {
@@ -979,6 +987,7 @@ function App() {
       "nectar-notch-remember-mode": setSettingsRememberMode,
       "nectar-panel-control-center-enabled": (v) => setPanelControlCenter(v !== false && v !== "false"),
       "nectar-panel-shelf-enabled": (v) => setPanelShelf(v !== false && v !== "false"),
+      "nectar-panel-performance-enabled": (v) => setPanelPerformance(v !== false && v !== "false"),
       "nectar-panel-status-enabled": (v) => setPanelStatus(v !== false && v !== "false"),
       "nectar-panel-order": (v) => setPanelOrder(parsePanelOrder(v === null ? null : String(v))),
       "nectar-cc-layout": (v) => setCcLayout(parseCcLayout(v === null ? null : String(v))),
@@ -1184,11 +1193,11 @@ function App() {
   // Paused:  command-center → status → music → calendar (secondary, after status)
   const availableNotchModes = () => {
     const musicBeforeStatus = isPlaying && mediaInfo.has_media && settingsMusicModeEnabled;
-    const modes: ('command-center' | 'status' | 'music' | 'calendar' | 'shelf')[] = panelOrder
+    const modes: ('performance' | 'command-center' | 'status' | 'music' | 'calendar' | 'shelf')[] = panelOrder
       ? [...panelOrder]
       : musicBeforeStatus
-        ? ['command-center', 'music', 'status', 'calendar', 'shelf']
-        : ['command-center', 'status', 'music', 'calendar', 'shelf'];
+        ? ['performance', 'command-center', 'music', 'status', 'calendar', 'shelf']
+        : ['performance', 'command-center', 'status', 'music', 'calendar', 'shelf'];
     const noStatusWidgets = !panelStatus || statusWidgets.left.length + statusWidgets.right.length === 0;
     return modes.filter(m => {
       if (m === 'status' && noStatusWidgets && nectarMode !== 'status') return false;
@@ -1196,6 +1205,7 @@ function App() {
       if (m === 'calendar' && !productivityEnabled) return false;
       if (m === 'shelf' && (!isNotchWindow || settingsLegacyMode || !panelShelf)) return false;
       if (m === 'command-center' && !panelControlCenter) return false;
+      if (m === 'performance' && (!panelPerformance || !isNotchWindow)) return false;
       return true;
     });
   };
@@ -1960,10 +1970,10 @@ function App() {
   });
 
   useEffect(() => {
-    if ((nectarMode === 'command-center' && !panelControlCenter) || (nectarMode === 'shelf' && !panelShelf)) {
+    if ((nectarMode === 'command-center' && !panelControlCenter) || (nectarMode === 'shelf' && !panelShelf) || (nectarMode === 'performance' && !panelPerformance)) {
       setNectarMode('status');
     }
-  }, [nectarMode, panelControlCenter, panelShelf]);
+  }, [nectarMode, panelControlCenter, panelShelf, panelPerformance]);
 
   useEffect(() => {
     if (nectarMode === 'agent' && !agentActivity) setNectarMode('status');
@@ -1991,6 +2001,7 @@ function App() {
 
   const getDynamicWidth = () => {
     if (nectarMode === 'agent') return 340;
+    if (nectarMode === 'performance' && isHovered) return 380;
     if (nectarMode === 'shelf') return Math.max(300, Math.min(120 + shelf.items.length * 70, 460));
     if (isCalendarMode) return Math.max(settingsCalendarEnabled && showClockColumn ? 480 : settingsCalendarEnabled ? 310 : 270, 140 + dualClockExtra);
     if (nectarMode === 'command-center' && isHovered) {
@@ -2022,6 +2033,10 @@ function App() {
       return isImpacted ? 28.9 : 44.2;
     }
     if (nectarMode === 'agent') return agentActivity?.ask ? 184 : agentActivity?.detail ? 160 : 130;
+    if (nectarMode === 'performance' && isHovered) {
+      const rows = Math.max(perf.topCpu.length, perf.topMem.length) || 8;
+      return 36 + panelBodyHeight(perf.snap?.disks.length ?? 0, rows);
+    }
     if (nectarMode === 'shelf') return shelf.items.length === 0 ? 96 : 176;
     if (nectarMode === 'calendar') return settingsCalendarEnabled ? (caldav.connected ? 350 : 310) : 262;
     if (nectarMode === 'command-center') {
@@ -2048,7 +2063,7 @@ function App() {
   // Left edge: the island is a thin vertical pill until hovered (or while hidden).
   const leftCollapsed = isLeft && (!isExpanded || isHidden || !isHovered);
   // Calendar, command center and shelf are big, dense panels; glass styles thicken the fill for them
-  const isPanelOpen = isHovered && (isCalendarMode || nectarMode === 'command-center' || nectarMode === 'shelf');
+  const isPanelOpen = isHovered && (isCalendarMode || nectarMode === 'command-center' || nectarMode === 'shelf' || nectarMode === 'performance');
 
   // Album tints the whole notch, collapsed pill included. The expanded state
   // reads --nectar-bg-expanded and the muted/border vars live on :root, so all
@@ -2147,6 +2162,8 @@ function App() {
             const remembered = settingsRememberMode ? rememberedModeRef.current : null;
             if (agentNeedsYou) setNectarMode('agent');
             else if (remembered && availableNotchModes().includes(remembered)) setNectarMode(remembered);
+            // Ledge: Performance is the default panel on reveal.
+            else if (panelPerformance && isNotchWindow) setNectarMode('performance');
             else setNectarMode(mediaInfo.has_media && isPlaying ? 'music' : 'status');
           }
         }}
@@ -2161,7 +2178,7 @@ function App() {
           const targetMode = mediaInfo.has_media && isPlaying && settingsMusicCompactNotch ? 'music' : 'status';
           if (nectarMode === 'music') {
             setNectarMode(targetMode);
-          } else if (nectarMode === 'command-center' || nectarMode === 'calendar' || nectarMode === 'status' || nectarMode === 'shelf' || nectarMode === 'agent') {
+          } else if (nectarMode === 'command-center' || nectarMode === 'calendar' || nectarMode === 'status' || nectarMode === 'shelf' || nectarMode === 'agent' || nectarMode === 'performance') {
             setNectarMode(targetMode);
           }
         }}
@@ -2809,6 +2826,20 @@ function App() {
                       </div>
                     </div>
                     </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {nectarMode === 'performance' && isHovered && (
+                  <motion.div
+                    key="performance"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, transition: { duration: 0.1 } }}
+                    transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                  >
+                    <PerformancePanel perf={perf} />
                   </motion.div>
                 )}
               </AnimatePresence>

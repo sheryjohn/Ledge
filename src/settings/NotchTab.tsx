@@ -1,6 +1,7 @@
 import { AgentSounds } from "./AgentSounds";
 import { NotchEdgeDelay } from "./NotchEdgeDelay";
 import { NotchPosition } from "./NotchPosition";
+import { PerformanceSettings } from "./PerformanceSettings";
 import { NetWidgetMode } from "./NetWidgetMode";
 import { NotchHotkey } from "./NotchHotkey";
 import {
@@ -33,6 +34,7 @@ import {
   BellRing,
   Globe,
   Volume2,
+  Gauge,
 } from "lucide-react";
 import { DEFAULT_PANEL_ORDER, type CcLayout, type PanelId } from "../panelOrder";
 import { ControlCenterConfig } from "../components/ControlCenterConfig";
@@ -40,6 +42,7 @@ import { OrderList } from "./OrderList";
 import type { ComponentType } from "react";
 
 const PANEL_ICONS: Record<string, ComponentType<{ size?: number; strokeWidth?: number }>> = {
+  performance: Gauge,
   "command-center": SlidersHorizontal,
   status: Activity,
   music: Music,
@@ -434,6 +437,8 @@ export function NotchTab({
                 <span className="slider"></span>
               </label>
             </SettingRow>
+
+        <PerformanceSettings />
 
         <SettingRow icon={Inbox} label={t("notch.panelShelf")} desc={t("notch.panelShelf.desc")}>
               <label className="toggle-switch">
