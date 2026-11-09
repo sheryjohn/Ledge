@@ -1,6 +1,9 @@
 //! Ledge Performance panel: samples system vitals with `sysinfo` and pushes them to the
-//! frontend as `perf-snapshot` events. Sampling only runs while a notch window reports the
-//! panel as open (`set_perf_active`), so a hidden Ledge costs nothing.
+//! frontend as `perf-snapshot` events.
+//!
+//! While a notch window reports the panel open (`set_perf_active`) it takes a full sample,
+//! process list included, every `nectar-perf-interval-ms`. Otherwise it takes a light sample
+//! (no process scan) every few seconds, so the sparklines already have history on reveal.
 
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -14,6 +17,8 @@ use tauri::{AppHandle, Emitter};
 pub const EVENT: &str = "perf-snapshot";
 
 const DEFAULT_INTERVAL_MS: u64 = 1000;
+/// Light sampling cadence while no panel is open.
+const IDLE_INTERVAL: Duration = Duration::from_secs(5);
 const DEFAULT_TOP_N: usize = 8;
 
 #[derive(Clone, Debug, Serialize, PartialEq)]
@@ -50,6 +55,8 @@ pub struct PerfSnapshot {
     pub disk_write_bps: u64,
     pub net_rx_bps: u64,
     pub net_tx_bps: u64,
+    /// False for light samples; the process fields are then empty and should be ignored.
+    pub has_processes: bool,
     pub process_count: usize,
     pub top_cpu: Vec<ProcInfo>,
     pub top_mem: Vec<ProcInfo>,
@@ -153,21 +160,23 @@ impl Sampler {
         }
     }
 
-    fn sample(&mut self, top_n: usize) -> PerfSnapshot {
+    fn sample(&mut self, top_n: usize, with_processes: bool) -> PerfSnapshot {
         let now = Instant::now();
         let elapsed = now.duration_since(self.last);
         self.last = now;
 
         self.sys.refresh_cpu_usage();
         self.sys.refresh_memory();
-        self.sys.refresh_processes_specifics(ProcessesToUpdate::All, true, ProcessRefreshKind::nothing().with_cpu().with_memory());
+        if with_processes {
+            self.sys.refresh_processes_specifics(ProcessesToUpdate::All, true, ProcessRefreshKind::nothing().with_cpu().with_memory());
+        }
         self.disks.refresh(true);
         self.networks.refresh(true);
 
         let cores = self.sys.cpus().len();
         let cpu_cores: Vec<f32> = self.sys.cpus().iter().map(|c| c.cpu_usage()).collect();
 
-        let procs: Vec<ProcInfo> = self
+        let procs: Vec<ProcInfo> = if !with_processes { Vec::new() } else { self
             .sys
             .processes()
             .values()
@@ -178,7 +187,7 @@ impl Sampler {
                 cpu: normalize_cpu(p.cpu_usage(), cores),
                 mem: p.memory(),
             })
-            .collect();
+            .collect() };
 
         let mut disk_read = 0u64;
         let mut disk_write = 0u64;
@@ -226,6 +235,7 @@ impl Sampler {
             disk_write_bps: disk_write,
             net_rx_bps: per_second(rx, elapsed),
             net_tx_bps: per_second(tx, elapsed),
+            has_processes: with_processes,
             process_count: procs.len(),
             top_cpu: top_n_by(&procs, top_n, |p| p.cpu as f64),
             top_mem: top_n_by(&procs, top_n, |p| p.mem as f64),
@@ -233,28 +243,23 @@ impl Sampler {
     }
 }
 
-/// Starts the sampler thread once. It parks until `set_perf_active(true)`.
+/// Starts the sampler thread once. `set_perf_active(true)` wakes it for an immediate full sample.
 pub fn start(app: AppHandle) {
     let spawned = std::thread::Builder::new().name("perf-sampler".into()).spawn(move || {
-        let mut sampler: Option<Sampler> = None;
+        let mut sampler = Sampler::new();
+        // First CPU readings need a gap after the priming refresh.
+        std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL.max(Duration::from_millis(250)));
         loop {
-            if !ACTIVE.load(Ordering::Relaxed) {
-                // Drop the sampler while idle so the process table is not held in memory.
-                sampler = None;
-                std::thread::park_timeout(Duration::from_secs(5));
-                continue;
-            }
-            let s = sampler.get_or_insert_with(|| {
-                let s = Sampler::new();
-                // First CPU readings need a gap after the priming refresh.
-                std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL.max(Duration::from_millis(250)));
-                s
-            });
+            let active = ACTIVE.load(Ordering::Relaxed);
             let top_n = parse_top_n(crate::utils::get_setting_str(&app, "nectar-perf-top-n").as_deref());
-            let interval = parse_interval_ms(crate::utils::get_setting_str(&app, "nectar-perf-interval-ms").as_deref());
-            let snap = s.sample(top_n);
+            let snap = sampler.sample(top_n, active);
             let _ = app.emit(EVENT, &snap);
-            std::thread::park_timeout(Duration::from_millis(interval));
+            let wait = if active {
+                Duration::from_millis(parse_interval_ms(crate::utils::get_setting_str(&app, "nectar-perf-interval-ms").as_deref()))
+            } else {
+                IDLE_INTERVAL
+            };
+            std::thread::park_timeout(wait);
         }
     });
     if let Ok(handle) = spawned {
