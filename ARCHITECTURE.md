@@ -178,3 +178,17 @@ Measured on the authoring machine, `sysinfo` and Task Manager read different cou
 | Swap | Page file size from `GlobalMemoryStatusEx` | Committed memory | Different concept |
 
 Matching Task Manager means reading `\Processor Information(_Total)\% Processor Utility` through PDH, private working set per process, showing network in bits per second for physical adapters only, and optionally grouping processes by executable name.
+
+### Matching Task Manager (in progress)
+
+New module `src-tauri/src/winperf.rs` reads the same Windows sources Task Manager does. Each reader returns `None` on failure and the sampler falls back to the `sysinfo` value, so a missing counter never blanks the panel.
+
+| Metric | Source | Notes |
+|--------|--------|-------|
+| CPU total | PDH `\Processor Information(_Total)\% Processor Utility`, English counter name so it works on any display language | Capped at 100 like Task Manager |
+| Process CPU | `sysinfo` per process, scaled by utility / time for the same sample | Makes the rows add up to the header, as on the Processes tab |
+| Process memory | `NtQuerySystemInformation(SystemProcessInformation)`, field `WorkingSetPrivateSize` | One call for every process, no process handles, so elevated processes read too |
+| Committed | `GlobalMemoryStatusEx`: limit `ullTotalPageFile`, used `ullTotalPageFile - ullAvailPageFile` | Replaces swap; snapshot fields renamed `commit_used` / `commit_total` |
+| Network | `GetIfTable2`, rows with HardwareInterface set, FilterInterface clear, and status Up | Shown in bits per second (Kbps, Mbps, decimal) |
+
+Not changed: the list stays one row per process, like the Details tab. Disk speeds already match.
