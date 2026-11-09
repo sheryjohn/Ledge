@@ -60,12 +60,25 @@ Nectar already uses the left screen edge. The volume HUD (`overlay` window, `nec
 
 1. **New setting** `nectar-notch-position`: `top` (default, unchanged upstream behaviour) or `left`. It keeps the `nectar-` prefix like every other key until the Phase 3 rename.
 2. **New module** `src-tauri/src/notch_geometry.rs` holds the position enum and pure, unit-tested functions for:
+   - the strip depth (top: 420 logical px as upstream; left: 960, because expanded panels grow sideways and the widest passes 780),
    - the notch window rectangle on a monitor (top: full width by depth; left: depth by full height),
    - the edge band test (top: y near 0; left: x near 0),
    - the padded interactive box and the edge span around the island.
 3. `init_notch_window`, `register_appbar`, the main hit-test and `hit_test_extra_notch_windows` call those functions instead of hard-coding the top edge. With `top` the numbers are identical to upstream.
 4. **Frontend:** `App.tsx` reads `nectar-notch-position`. For `left` the screen container anchors the island to the left edge, vertically centred; the hide offset moves to `x`; the collapsed pill swaps to a thin vertical shape; the corners flush against the edge flatten; the expanded panel grows rightward. Collapsed status content is not shown in `left` yet, because it is laid out horizontally. A portrait collapsed layout is the remaining Phase 1 item.
 5. **HUD collision:** when the notch is on the left, the volume HUD is treated as being on the right, both in the hook and in `Overlay.tsx`, so the two never fight over the same band.
-6. **Settings UI:** a Position control in Settings, Notch tab.
+6. **Settings UI:** a Position control in Settings, Notch tab (`src/settings/NotchPosition.tsx`). Saving the key makes `save_setting` re-run `init_notch_window` for every notch window with that window's own resolved mode, so per-monitor modes are kept.
+
+## Phase 1 status
+
+Done on branch `ledge/phase-1`: items 1 to 6 above.
+
+Open:
+
+- **Not yet compiled or run.** The machine this was written on had no Rust toolchain or Bun. First step on a dev machine: `cargo test --manifest-path src-tauri/Cargo.toml notch_geometry`, then `bun run tauri dev`, set Position to Left and Peek on.
+- **Portrait collapsed content.** In `left` the collapsed pill is empty; status widgets, music compact view and agent wings only appear once the island is hovered and expanded.
+- **Reveal semantics.** As upstream, touching the edge reveals the collapsed pill and hovering the pill expands it. The brief wants vitals the moment the cursor touches the edge, which likely means expanding straight away in `left` mode. Decide once Phase 2 makes Performance the default panel.
+- **Expanded panel layouts** are unchanged landscape panels growing rightward. They fit, but the visualiser and mode switcher may want portrait variants.
+- `isImpacted` (the flattened, wider top notch) has no left-edge meaning yet; it only flattens the left corners.
 
 Not changed in Phase 1: the dock, the overlay HUD geometry itself, multi-monitor selection, and all mode content.
