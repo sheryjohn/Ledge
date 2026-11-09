@@ -118,3 +118,43 @@ Not verified, needs a dev machine:
 - Behaviour: panel height against the top strip with many disks, sampler CPU cost, kill of an elevated process (expected to fail with a readable error in the row).
 
 Left for Phase 3: threshold colours, per-core view, renaming, and translations of the new strings (English is the fallback for every other language).
+
+## Phase 3 plan: rename, thresholds, polish
+
+### Rename map
+
+Identity is what Windows and other tools key on. Every item below changes together so Ledge and an installed Nectar can live side by side without touching each other.
+
+| Thing | Nectar | Ledge |
+|-------|--------|-------|
+| App identifier, settings and data folder | `com.kua8.nectar` | `com.sheryjohn.ledge` (fresh settings; Nectar's are left alone) |
+| Executable, Cargo package | `nectar.exe`, `nectar` / `nectar_lib` | `ledge.exe`, `ledge` / `ledge_lib` |
+| Product name, window titles | `nectar`, `Nectar Dock`, `Nectar Settings` | `ledge`, `Ledge Dock`, `Ledge Settings` |
+| Single-instance mutex and event | `NectarSingleInstance`, `NectarOpenSettings` | `LedgeSingleInstance`, `LedgeOpenSettings` |
+| Window classes | `NectarAttentionHook`, `NectarDisplayMonitor` | `LedgeAttentionHook`, `LedgeDisplayMonitor` |
+| Logon task, uninstall key, shortcuts | `Nectar`, `...\Uninstall\Nectar`, `Nectar.lnk` | `Ledge`, `...\Uninstall\Ledge`, `Ledge.lnk` |
+| Install registry key | `Software\kua8\nectar` | `Software\sheryjohn\ledge` |
+| Credential store names, user agent, log file | `Nectar CalDAV`, `Nectar`, `nectar.log` | `Ledge CalDAV`, `Ledge`, `ledge.log` |
+| Updater | `kua8/Nectar` releases | `sheryjohn/Ledge` releases |
+
+Kept on purpose: the `nectar-` settings key prefix, the `.nectar` CSS class and internal function names such as `quit_nectar`. They are invisible to users, and renaming them would only churn the diff against upstream.
+
+**Updater.** The updater must not point at Nectar's releases, or a renamed Ledge would offer to replace itself with Nectar. It now points at the fork. The fork has no releases yet, so the updater finds nothing. Publishing Ledge releases later needs a new signing key pair, because the public key in `tauri.conf.json` belongs to upstream.
+
+**Uninstall safety.** Both uninstallers (the app's own and `installer-app`) only delete a whole folder when its name contains the product name. That check moves from `nectar` to `ledge` in both, with tests, so the two products can never delete each other's folders.
+
+User-facing text: "Nectar" becomes "Ledge" in all six locales. README and Settings > About credit Nectar (kua8) and Bloom (Sehajveer Singh) under GPL-3.0.
+
+### Thresholds
+
+Colour states, computed in `perfFormat.ts` and unit tested:
+
+- CPU: amber when the 10 second average is at or above 80 %, red at or above 95 %. Sustained, so a single spike does not flash.
+- Memory: amber at or above 80 %, red at or above 90 %.
+- Disk: amber when a volume has less than 15 % free, red below 5 %.
+
+The headline tiles, sparklines and disk bars take the colour. The collapsed left-edge pill takes the worst state, so trouble is visible without opening the panel.
+
+### Polish
+
+- Translations of the Ledge strings into the five other bundled languages.
