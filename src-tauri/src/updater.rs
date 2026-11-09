@@ -15,7 +15,7 @@ const CHECK_TIMEOUT_SECS: u64 = 10;
 /// broken release cannot reach everyone within minutes of being published.
 const MIN_AUTO_INSTALL_AGE_SECS: i64 = 24 * 60 * 60;
 const STATE_FILE: &str = "update-state.json";
-const RELEASES_API: &str = "https://api.github.com/repos/kua8/Nectar/releases?per_page=10";
+const RELEASES_API: &str = "https://api.github.com/repos/sheryjohn/Ledge/releases?per_page=10";
 
 /// Serializes manifest requests so concurrent callers share a single network hit.
 static CHECK_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
@@ -229,7 +229,7 @@ pub async fn install(app: &AppHandle) -> Result<(), String> {
     result
 }
 
-const RELEASES_PAGE: &str = "https://github.com/kua8/Nectar/releases/latest";
+const RELEASES_PAGE: &str = "https://github.com/sheryjohn/Ledge/releases/latest";
 
 fn is_installed_copy() -> bool {
     std::env::current_exe()
